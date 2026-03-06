@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="Markdown" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+    <Color name="Heading"    foreground="#569CD6" fontWeight="bold"/>
+    <Color name="Bold"       foreground="#D4D4D4" fontWeight="bold"/>
+    <Color name="Italic"     foreground="#D4D4D4" fontStyle="italic"/>
+    <Color name="Code"       foreground="#CE9178" background="#2D2D2D"/>
+    <Color name="Link"       foreground="#4EC9B0"/>
+    <Color name="Image"      foreground="#B5CEA8"/>
+    <Color name="Quote"      foreground="#6A9955"/>
+    <Color name="List"       foreground="#569CD6"/>
+    <Color name="Hr"         foreground="#555555"/>
+    <Color name="Comment"    foreground="#6A9955"/>
+
+    <!-- AvalonEdit requires <RuleSet> (not <MainRuleSet>) -->
+    <RuleSet>
+        <!-- Fenced code blocks  ``` ... ``` -->
+        <Span color="Code" multiline="true">
+            <Begin>```</Begin>
+            <End>```</End>
+        </Span>
+
+        <!-- Inline code  `code` -->
+        <Span color="Code">
+            <Begin>`</Begin>
+            <End>`</End>
+        </Span>
+
+        <!-- Bold  **text** -->
+        <Span color="Bold">
+            <Begin>\*\*</Begin>
+            <End>\*\*</End>
+        </Span>
+
+        <!-- Bold  __text__ -->
+        <Span color="Bold">
+            <Begin>__</Begin>
+            <End>__</End>
+        </Span>
+
+        <!-- Italic  *text* -->
+        <Span color="Italic">
+            <Begin>\*</Begin>
+            <End>\*</End>
+        </Span>
+
+        <!-- Links  [text](url) -->
+        <Span color="Link">
+            <Begin>\[</Begin>
+            <End>\]\([^\)]*\)</End>
+        </Span>
+
+        <!-- Images  ![alt](url) -->
+        <Span color="Image">
+            <Begin>!\[</Begin>
+            <End>\]\([^\)]*\)</End>
+        </Span>
+
+        <!-- HTML comments  <!-- ... --> -->
+        <Span color="Comment" multiline="true">
+            <Begin>&lt;!--</Begin>
+            <End>--&gt;</End>
+        </Span>
+
+        <!--
+            HEADINGS: match # followed by a space.
+            Rule must match >= 1 character. '# ' is 2 chars — safe.
+            We match up to 6 # signs + space using alternation.
+        -->
+        <Rule color="Heading">#{1,6} </Rule>
+
+        <!-- Blockquote marker -->
+        <Rule color="Quote">&gt; </Rule>
+
+        <!-- Horizontal rule patterns (always >= 3 chars) -->
+        <Rule color="Hr">---+</Rule>
+        <Rule color="Hr">\*\*\*+</Rule>
+        <Rule color="Hr">___+</Rule>
+    </RuleSet>
+</SyntaxDefinition>

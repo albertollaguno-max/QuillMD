@@ -1,0 +1,640 @@
+<Window x:Class="PlannamTypora.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="PlannamTypora"
+        Height="750" Width="1200"
+        MinHeight="400" MinWidth="600"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource ForegroundBrush}">
+
+    <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewTabCommand}"/>
+        <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenFileCommand}"/>
+        <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveCommand}"/>
+        <KeyBinding Key="S" Modifiers="Ctrl+Shift" Command="{Binding SaveAsCommand}"/>
+        <KeyBinding Key="W" Modifiers="Ctrl" Command="{Binding CloseTabCommand}"/>
+        <KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding ToggleFindCommand}"/>
+        <KeyBinding Key="H" Modifiers="Ctrl" Command="{Binding ToggleReplaceCommand}"/>
+        <KeyBinding Key="B" Modifiers="Ctrl" Command="{Binding FormatBoldCommand}"/>
+        <KeyBinding Key="I" Modifiers="Ctrl" Command="{Binding FormatItalicCommand}"/>
+        <KeyBinding Key="K" Modifiers="Ctrl" Command="{Binding FormatLinkCommand}"/>
+        <KeyBinding Key="E" Modifiers="Ctrl" Command="{Binding FormatCodeCommand}"/>
+        <KeyBinding Key="Tab" Modifiers="Ctrl" Command="{Binding NextTabCommand}"/>
+        <KeyBinding Key="Tab" Modifiers="Ctrl+Shift" Command="{Binding PrevTabCommand}"/>
+        <KeyBinding Key="Escape" Command="{Binding CloseFindBarCommand}"/>
+        <!-- Headings Ctrl+1 to Ctrl+6, Ctrl+0 paragraph -->
+        <KeyBinding Key="D1" Modifiers="Ctrl" Command="{Binding FormatHeadingCommand}" CommandParameter="1"/>
+        <KeyBinding Key="D2" Modifiers="Ctrl" Command="{Binding FormatHeadingCommand}" CommandParameter="2"/>
+        <KeyBinding Key="D3" Modifiers="Ctrl" Command="{Binding FormatHeadingCommand}" CommandParameter="3"/>
+        <KeyBinding Key="D4" Modifiers="Ctrl" Command="{Binding FormatHeadingCommand}" CommandParameter="4"/>
+        <KeyBinding Key="D5" Modifiers="Ctrl" Command="{Binding FormatHeadingCommand}" CommandParameter="5"/>
+        <KeyBinding Key="D6" Modifiers="Ctrl" Command="{Binding FormatHeadingCommand}" CommandParameter="6"/>
+        <KeyBinding Key="D0" Modifiers="Ctrl" Command="{Binding ParagraphCommand}"/>
+        <!-- Clipboard -->
+        <KeyBinding Key="C" Modifiers="Ctrl+Shift" Command="{Binding CopyAsMarkdownCommand}"/>
+        <KeyBinding Key="V" Modifiers="Ctrl+Shift" Command="{Binding PastePlainTextCommand}"/>
+        <!-- View -->
+        <KeyBinding Key="F11" Command="{Binding FullscreenCommand}"/>
+        <KeyBinding Key="F8" Command="{Binding FocusModeCommand}"/>
+        <KeyBinding Key="L" Modifiers="Ctrl+Shift" Command="{Binding ToggleSidebarCommand}"/>
+        <KeyBinding Key="T" Modifiers="Ctrl" Command="{Binding InsertTableCommand}"/>
+        <KeyBinding Key="K" Modifiers="Ctrl+Shift" Command="{Binding FormatCodeBlockCommand}"/>
+        <KeyBinding Key="I" Modifiers="Ctrl+Shift" Command="{Binding FormatImageCommand}"/>
+    </Window.InputBindings>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Menu -->
+            <RowDefinition Height="Auto"/>  <!-- Toolbar -->
+            <RowDefinition Height="Auto"/>  <!-- Find/Replace bar -->
+            <RowDefinition Height="*"/>     <!-- Main content -->
+            <RowDefinition Height="Auto"/>  <!-- StatusBar -->
+        </Grid.RowDefinitions>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- MENU BAR -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <Menu Grid.Row="0" x:Name="MainMenu" Background="{DynamicResource MenuBrush}" Padding="4,0">
+            <!-- Archivo -->
+            <MenuItem Header="Archivo">
+                <MenuItem Header="Nuevo" Command="{Binding NewTabCommand}" InputGestureText="Ctrl+N"/>
+                <MenuItem Header="Abrir..." Command="{Binding OpenFileCommand}" InputGestureText="Ctrl+O"/>
+                <MenuItem Header="Abrir carpeta..." Command="{Binding OpenFolderCommand}"/>
+                <Separator/>
+                <MenuItem Header="Guardar" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Guardar como..." Command="{Binding SaveAsCommand}" InputGestureText="Ctrl+Shift+S"/>
+                <Separator/>
+                <MenuItem Header="Archivos recientes" ItemsSource="{Binding RecentFiles}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Setter Property="Header" Value="{Binding}"/>
+                            <Setter Property="Command" Value="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                            <Setter Property="CommandParameter" Value="{Binding}"/>
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="Exportar a HTML..." Command="{Binding ExportHtmlCommand}"/>
+                <MenuItem Header="Exportar a PDF..." Click="ExportPdf_Click" InputGestureText="Ctrl+Shift+P"/>
+                <Separator/>
+                <MenuItem Header="Cerrar pestaña" Command="{Binding CloseTabCommand}" InputGestureText="Ctrl+W"/>
+                <MenuItem Header="Salir" Command="{Binding ExitCommand}"/>
+            </MenuItem>
+
+            <!-- Editar -->
+            <MenuItem Header="Editar">
+                <MenuItem Header="Deshacer" Command="ApplicationCommands.Undo"
+                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+Z"/>
+                <MenuItem Header="Rehacer" Command="ApplicationCommands.Redo"
+                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+Y"/>
+                <Separator/>
+                <MenuItem Header="Cortar" Command="ApplicationCommands.Cut"
+                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+X"/>
+                <MenuItem Header="Copiar" Command="ApplicationCommands.Copy"
+                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+C"/>
+                <MenuItem Header="Pegar" Command="ApplicationCommands.Paste"
+                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+V"/>
+                <MenuItem Header="Seleccionar todo" Command="ApplicationCommands.SelectAll"
+                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+A"/>
+                <Separator/>
+                <MenuItem Header="Buscar..." Command="{Binding ToggleFindCommand}" InputGestureText="Ctrl+F"/>
+                <MenuItem Header="Buscar y reemplazar..." Command="{Binding ToggleReplaceCommand}" InputGestureText="Ctrl+H"/>
+            </MenuItem>
+
+            <!-- Ver -->
+            <MenuItem Header="Ver">
+                <MenuItem Header="Solo editor" Click="Btn_ViewEditor"/>
+                <MenuItem Header="Solo preview" Click="Btn_ViewPreview"/>
+                <MenuItem Header="Vista dividida" Click="Btn_ViewSplit"/>
+                <MenuItem Header="WYSIWYG" Click="Btn_ViewWysiwyg"/>
+                <Separator/>
+                <MenuItem Header="Alternar Tema" Command="{Binding ToggleThemeCommand}"/>
+            </MenuItem>
+
+            <!-- Párrafo (estructura de bloque) -->
+            <MenuItem Header="Párrafo">
+                <MenuItem Header="Párrafo" Click="Btn_Paragraph" InputGestureText="Ctrl+0"/>
+                <Separator/>
+                <MenuItem Header="Título H1" Click="Btn_H1" InputGestureText="Ctrl+1"/>
+                <MenuItem Header="Título H2" Click="Btn_H2" InputGestureText="Ctrl+2"/>
+                <MenuItem Header="Título H3" Click="Btn_H3" InputGestureText="Ctrl+3"/>
+                <MenuItem Header="Título H4" Click="Btn_H4" InputGestureText="Ctrl+4"/>
+                <MenuItem Header="Título H5" Click="Btn_H5" InputGestureText="Ctrl+5"/>
+                <MenuItem Header="Título H6" Click="Btn_H6" InputGestureText="Ctrl+6"/>
+                <Separator/>
+                <MenuItem Header="Lista con viñetas" Click="Btn_UList"/>
+                <MenuItem Header="Lista numerada" Click="Btn_OList"/>
+                <MenuItem Header="Lista de tareas" Click="Btn_TaskList"/>
+                <Separator/>
+                <MenuItem Header="Cita" Click="Btn_Quote"/>
+            </MenuItem>
+
+            <!-- Formato (inline) -->
+            <MenuItem Header="Formato">
+                <MenuItem Header="Negrita" Click="Btn_Bold" InputGestureText="Ctrl+B"/>
+                <MenuItem Header="Cursiva" Click="Btn_Italic" InputGestureText="Ctrl+I"/>
+                <MenuItem Header="Tachado" Click="Btn_Strike"/>
+                <MenuItem Header="Código en línea" Click="Btn_Code" InputGestureText="Ctrl+E"/>
+                <Separator/>
+                <MenuItem Header="Enlace" Click="Btn_Link" InputGestureText="Ctrl+K"/>
+                <MenuItem Header="Imagen" Click="Btn_Image" InputGestureText="Ctrl+Shift+I"/>
+            </MenuItem>
+
+            <!-- Insertar (bloques y elementos) -->
+            <MenuItem Header="Insertar">
+                <MenuItem Header="Tabla..." Click="Btn_Table" InputGestureText="Ctrl+T"/>
+                <MenuItem Header="Bloque de código" Click="Btn_CodeBlock" InputGestureText="Ctrl+Shift+K"/>
+                <MenuItem Header="Bloque de ecuaciones" Click="Btn_MathBlock"/>
+                <Separator/>
+                <MenuItem Header="Línea horizontal" Click="Btn_Hr"/>
+                <MenuItem Header="Nota al pie" Click="Btn_Footnote"/>
+                <MenuItem Header="Tabla de contenidos" Click="Btn_TOC"/>
+            </MenuItem>
+
+            <!-- Visualizacion -->
+            <MenuItem Header="Visualización" x:Name="MenuVisualizacion">
+                <MenuItem Header="Alternar barra lateral" Click="Btn_ToggleSidebar" InputGestureText="Ctrl+Shift+L"/>
+                <Separator/>
+                <MenuItem Header="Archivos" Click="Btn_ShowFiles"/>
+                <MenuItem Header="Índice" Click="Btn_ShowOutline"/>
+                <Separator/>
+                <MenuItem Header="Modo código fuente" Click="Btn_SourceMode"/>
+                <MenuItem Header="Modo sin distracciones" Click="Btn_FocusMode" InputGestureText="F8"/>
+                <MenuItem Header="Modo máquina de escribir" Click="Btn_TypewriterMode" x:Name="MenuTypewriter"/>
+                <Separator/>
+                <MenuItem Header="Pantalla completa" Click="Btn_Fullscreen" InputGestureText="F11"/>
+                <MenuItem Header="Siempre encima" Click="Btn_AlwaysOnTop" x:Name="MenuAlwaysOnTop"/>
+                <Separator/>
+                <MenuItem Header="Acercar" Click="Btn_ZoomIn" InputGestureText="Ctrl++"/>
+                <MenuItem Header="Alejar" Click="Btn_ZoomOut" InputGestureText="Ctrl+-"/>
+                <MenuItem Header="Tamaño real" Click="Btn_ZoomReset"/>
+                <Separator/>
+                <MenuItem Header="Mostrar barra de estado" Click="Btn_ToggleStatusBar" x:Name="MenuStatusBar"/>
+            </MenuItem>
+
+            <!-- Ayuda -->
+            <MenuItem Header="Ayuda">
+                <MenuItem Header="Referencia Markdown..." Command="{Binding ShowMarkdownHelpCommand}"/>
+                <Separator/>
+                <MenuItem Header="Acerca de PlannamTypora" Command="{Binding ShowAboutCommand}"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- TOOLBAR -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <Border Grid.Row="1" x:Name="MainToolbar" Background="{DynamicResource ToolbarBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,0.5" Height="36">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                <!-- File operations - keep Command binding, these don't need editor focus -->
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Command="{Binding NewTabCommand}" ToolTip="Nuevo (Ctrl+N)" FontSize="15">📄</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Command="{Binding OpenFileCommand}" ToolTip="Abrir (Ctrl+O)" FontSize="15">📂</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Command="{Binding SaveCommand}" ToolTip="Guardar (Ctrl+S)" FontSize="15">💾</Button>
+
+                <Separator/>
+
+                <!-- Format buttons: Focusable=False keeps editor focus, Click calls method directly -->
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Bold" ToolTip="Negrita (Ctrl+B)" FontWeight="Bold" Width="32">B</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Italic" ToolTip="Cursiva (Ctrl+I)" FontStyle="Italic" Width="32">I</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Strike" ToolTip="Tachado" Width="32">
+                    <TextBlock TextDecorations="Strikethrough">S</TextBlock>
+                </Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Code" ToolTip="Código (Ctrl+E)" FontFamily="Consolas" Width="32">`c`</Button>
+
+                <Separator/>
+
+                <!-- Heading buttons -->
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Paragraph" ToolTip="Párrafo (quitar formato de bloque)" Width="32">¶</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_H1" ToolTip="Título H1" FontWeight="SemiBold" Width="32">H1</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_H2" ToolTip="Título H2" FontWeight="SemiBold" Width="32">H2</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_H3" ToolTip="Título H3" FontWeight="SemiBold" Width="32">H3</Button>
+
+                <Separator/>
+
+                <!-- Lists and blocks -->
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_UList" ToolTip="Lista con viñetas" FontSize="15">≡</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_OList" ToolTip="Lista numerada" FontSize="15">⓵</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_TaskList" ToolTip="Lista de tareas" FontSize="14">☑</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Quote" ToolTip="Cita" FontSize="15">❝</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Link" ToolTip="Enlace (Ctrl+K)" FontSize="15">🔗</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Hr" ToolTip="Línea horizontal">—</Button>
+
+                <Separator/>
+
+                <!-- Insert -->
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Table" ToolTip="Tabla (Ctrl+T)" FontSize="14">▦</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_Image" ToolTip="Imagen (Ctrl+Shift+I)" FontSize="14">🖼</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_CodeBlock" ToolTip="Bloque de código (Ctrl+Shift+K)" FontSize="13">{}</Button>
+
+                <Separator/>
+
+                <!-- View mode -->
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_ViewEditor" ToolTip="Solo editor" FontSize="14">✏️</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_ViewSplit" ToolTip="Vista dividida" FontSize="14">⬛</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_ViewPreview" ToolTip="Solo preview" FontSize="14">👁️</Button>
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Click="Btn_ViewWysiwyg" ToolTip="WYSIWYG (editar en preview)" FontWeight="Bold" Width="32">W</Button>
+
+                <Separator/>
+
+                <!-- Theme toggle -->
+                <Button Style="{DynamicResource ToolbarButtonStyle}" Focusable="False"
+                        Command="{Binding ToggleThemeCommand}" ToolTip="Cambiar tema" FontSize="16" 
+                        x:Name="ThemeButton">🌙</Button>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- FIND/REPLACE BAR (collapsed by default) -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <Border Grid.Row="2" x:Name="FindBar"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" 
+                BorderThickness="0,0,0,0.5"
+                Padding="8,6"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Buscar:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{DynamicResource ForegroundMutedBrush}" FontSize="12"/>
+                <TextBox Grid.Column="1" x:Name="FindTextBox" 
+                         Style="{DynamicResource FindBarTextBoxStyle}"
+                         KeyDown="FindTextBox_KeyDown"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0">
+                    <Button Style="{DynamicResource ToolbarButtonStyle}" Click="FindPrev_Click" 
+                            ToolTip="Anterior (Shift+Enter)" Padding="4,2">◀</Button>
+                    <Button Style="{DynamicResource ToolbarButtonStyle}" Click="FindNext_Click"
+                            ToolTip="Siguiente (Enter)" Padding="4,2">▶</Button>
+                </StackPanel>
+                <CheckBox Grid.Column="3" x:Name="CaseSensitiveCheck"
+                          Style="{DynamicResource FindOptionCheckBoxStyle}"
+                          Content="Mayúsculas/minúsculas" VerticalAlignment="Center"/>
+                <CheckBox Grid.Column="4" x:Name="RegexCheck"
+                          Style="{DynamicResource FindOptionCheckBoxStyle}"
+                          Content="Regex" VerticalAlignment="Center" Margin="8,0"/>
+                <TextBlock Grid.Column="5" x:Name="FindResultLabel" VerticalAlignment="Center"
+                           Foreground="{DynamicResource ForegroundMutedBrush}" FontSize="12"/>
+                <Button Grid.Column="6" Style="{DynamicResource ToolbarButtonStyle}"
+                        Command="{Binding CloseFindBarCommand}" Padding="6,2" FontSize="14">✕</Button>
+
+                <!-- Replace row -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Reemplazar:" VerticalAlignment="Center" 
+                           Margin="0,4,8,0" Foreground="{DynamicResource ForegroundMutedBrush}" FontSize="12"
+                           x:Name="ReplaceLabel" Visibility="Collapsed"/>
+                <TextBox Grid.Row="1" Grid.Column="1" x:Name="ReplaceTextBox"
+                         Style="{DynamicResource FindBarTextBoxStyle}"
+                         Margin="0,4,0,0" Visibility="Collapsed"/>
+                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="8,4,0,0"
+                            x:Name="ReplaceButtons" Visibility="Collapsed">
+                    <Button Style="{DynamicResource ToolbarButtonStyle}" Click="ReplaceOne_Click" 
+                            Padding="6,2" FontSize="12">Reemplazar</Button>
+                    <Button Style="{DynamicResource ToolbarButtonStyle}" Click="ReplaceAll_Click"
+                            Padding="6,2" FontSize="12" Margin="4,0,0,0">Reemplazar todo</Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- MAIN CONTENT: Sidebar + Editor/Preview -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" MinWidth="0" x:Name="SidebarColumn"/>
+                <ColumnDefinition Width="2"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- SIDEBAR -->
+            <Border Grid.Column="0" x:Name="SidebarBorder"
+                    Background="{DynamicResource SidebarBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,0.5,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Sidebar header: compact with folder button -->
+                    <Border Grid.Row="0" Padding="10,6"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,0.5">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="EXPLORADOR"
+                                       FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ForegroundMutedBrush}"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Style="{DynamicResource ToolbarButtonStyle}"
+                                    Command="{Binding OpenFolderCommand}" ToolTip="Abrir carpeta"
+                                    Padding="3,1" FontSize="13">📁</Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Sidebar tab buttons: styled toggle row -->
+                    <Border Grid.Row="1" Padding="6,4"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,0.5">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <RadioButton x:Name="SidebarTabFiles" Content="Archivos"
+                                         Style="{DynamicResource SidebarToggleStyle}"
+                                         IsChecked="True" Checked="SidebarTab_Checked"/>
+                            <RadioButton x:Name="SidebarTabOutline" Content="Índice"
+                                         Style="{DynamicResource SidebarToggleStyle}"
+                                         Checked="SidebarTab_Checked" Margin="2,0,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sidebar content panels -->
+                    <Grid Grid.Row="2">
+                        <!-- Files panel -->
+                        <ScrollViewer x:Name="SidebarFilesPanel"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Auto">
+                            <TreeView x:Name="FileTree" ItemsSource="{Binding FileTreeItems}"
+                                      MouseDoubleClick="FileTree_MouseDoubleClick">
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Icon}" Margin="0,0,4,0" FontSize="13"/>
+                                            <TextBlock Text="{Binding Name}" FontSize="13"/>
+                                        </StackPanel>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                        </ScrollViewer>
+                        <!-- Outline panel -->
+                        <ScrollViewer x:Name="SidebarOutlinePanel"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      Visibility="Collapsed">
+                            <TreeView x:Name="OutlineTree"
+                                      Background="{DynamicResource SidebarBrush}"
+                                      BorderThickness="0" FontSize="13"/>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- SPLITTER between sidebar and content -->
+            <GridSplitter Grid.Column="1" x:Name="SidebarSplitter" Width="2" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource BorderBrush}"
+                          ResizeBehavior="PreviousAndNext"/>
+
+            <!-- CONTENT AREA: Tabs + Editor/Preview -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>  <!-- Tab strip -->
+                    <RowDefinition Height="*"/>     <!-- Editor/Preview -->
+                </Grid.RowDefinitions>
+
+                <!-- TAB STRIP -->
+                <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Disabled" Height="36">
+                    <StackPanel Orientation="Horizontal" x:Name="TabStrip"
+                                Background="{DynamicResource SurfaceBrush}">
+                        <ItemsControl ItemsSource="{Binding Tabs}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="tabBorder"
+                                            Background="{DynamicResource TabInactiveBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="0,2,1,0"
+                                            Cursor="Hand" MinWidth="120" MaxWidth="200"
+                                            MouseLeftButtonDown="Tab_MouseLeftButtonDown">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource TabActiveBrush}"/>
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid Margin="8,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding TabTitle}" 
+                                                       FontSize="13" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource ForegroundBrush}"/>
+                                            <Button Grid.Column="1" Content="✕" 
+                                                    Style="{DynamicResource ToolbarButtonStyle}"
+                                                    CommandParameter="{Binding}"
+                                                    Click="CloseTab_Click"
+                                                    Padding="2,0" Margin="4,0,0,0" FontSize="11"
+                                                    Foreground="{DynamicResource ForegroundMutedBrush}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Plus button for new tab -->
+                        <Button Style="{DynamicResource ToolbarButtonStyle}" 
+                                Command="{Binding NewTabCommand}"
+                                Padding="8,4" ToolTip="Nueva pestaña" FontSize="16" 
+                                VerticalAlignment="Center">+</Button>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- EDITOR / PREVIEW AREA -->
+                <Grid Grid.Row="1" x:Name="EditorPreviewGrid">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" x:Name="EditorColumn"/>
+                        <ColumnDefinition Width="2" x:Name="SplitterColumn"/>
+                        <ColumnDefinition Width="*" x:Name="PreviewColumn"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- EDITOR (AvalonEdit) -->
+                    <avalonedit:TextEditor
+                        Grid.Column="0"
+                        x:Name="Editor"
+                        FontFamily="Cascadia Code, Consolas, Courier New"
+                        FontSize="14"
+                        ShowLineNumbers="True"
+                        WordWrap="True"
+                        LineNumbersForeground="{DynamicResource ForegroundMutedBrush}"
+                        Background="{DynamicResource EditorBackgroundBrush}"
+                        Foreground="{DynamicResource EditorForegroundBrush}"
+                        Padding="16,12"
+                        TextChanged="Editor_TextChanged">
+                        <avalonedit:TextEditor.ContextMenu>
+                            <ContextMenu>
+                                <!-- Acciones basicas -->
+                                <MenuItem Header="Deshacer" Command="ApplicationCommands.Undo"
+                                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+Z"/>
+                                <MenuItem Header="Rehacer" Command="ApplicationCommands.Redo"
+                                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+Y"/>
+                                <Separator/>
+                                <MenuItem Header="Cortar" Command="ApplicationCommands.Cut"
+                                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+X"/>
+                                <MenuItem Header="Copiar" Command="ApplicationCommands.Copy"
+                                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+C"/>
+                                <MenuItem Header="Pegar" Command="ApplicationCommands.Paste"
+                                          CommandTarget="{Binding ElementName=Editor}" InputGestureText="Ctrl+V"/>
+                                <MenuItem Header="Seleccionar todo" Click="Btn_SelectAll" InputGestureText="Ctrl+A"/>
+                                <Separator/>
+                                <!-- Copiar como... -->
+                                <MenuItem Header="Copiar como...">
+                                    <MenuItem Header="Copiar como Markdown" Click="CopyAsMarkdown_Click" InputGestureText="Ctrl+Shift+C"/>
+                                    <MenuItem Header="Copiar como HTML" Click="CopyAsHtml_Click"/>
+                                    <MenuItem Header="Pegar como texto sin formato" Click="PastePlainText_Click" InputGestureText="Ctrl+Shift+V"/>
+                                </MenuItem>
+                                <Separator/>
+                                <!-- Formato inline -->
+                                <MenuItem Header="Negrita" Click="Btn_Bold" InputGestureText="Ctrl+B"/>
+                                <MenuItem Header="Cursiva" Click="Btn_Italic" InputGestureText="Ctrl+I"/>
+                                <MenuItem Header="Tachado" Click="Btn_Strike"/>
+                                <MenuItem Header="Código" Click="Btn_Code" InputGestureText="Ctrl+E"/>
+                                <MenuItem Header="Enlace" Click="Btn_Link" InputGestureText="Ctrl+K"/>
+                                <Separator/>
+                                <!-- Parrafo (submenu) -->
+                                <MenuItem Header="Párrafo">
+                                    <MenuItem Header="Párrafo" Click="Btn_Paragraph" InputGestureText="Ctrl+0"/>
+                                    <Separator/>
+                                    <MenuItem Header="Encabezado 1" Click="Btn_H1" InputGestureText="Ctrl+1"/>
+                                    <MenuItem Header="Encabezado 2" Click="Btn_H2" InputGestureText="Ctrl+2"/>
+                                    <MenuItem Header="Encabezado 3" Click="Btn_H3" InputGestureText="Ctrl+3"/>
+                                    <MenuItem Header="Encabezado 4" Click="Btn_H4" InputGestureText="Ctrl+4"/>
+                                    <MenuItem Header="Encabezado 5" Click="Btn_H5" InputGestureText="Ctrl+5"/>
+                                    <MenuItem Header="Encabezado 6" Click="Btn_H6" InputGestureText="Ctrl+6"/>
+                                    <Separator/>
+                                    <MenuItem Header="Cita" Click="Btn_Quote"/>
+                                    <MenuItem Header="Lista con viñetas" Click="Btn_UList"/>
+                                    <MenuItem Header="Lista numerada" Click="Btn_OList"/>
+                                    <MenuItem Header="Lista de tareas" Click="Btn_TaskList"/>
+                                </MenuItem>
+                                <!-- Insertar (submenu) -->
+                                <MenuItem Header="Insertar">
+                                    <MenuItem Header="Imagen" Click="Btn_Image" InputGestureText="Ctrl+Shift+I"/>
+                                    <MenuItem Header="Nota al pie" Click="Btn_Footnote"/>
+                                    <MenuItem Header="Línea horizontal" Click="Btn_Hr"/>
+                                    <MenuItem Header="Tabla" Click="Btn_Table" InputGestureText="Ctrl+T"/>
+                                    <MenuItem Header="Bloque de código" Click="Btn_CodeBlock" InputGestureText="Ctrl+Shift+K"/>
+                                    <MenuItem Header="Bloque de ecuaciones" Click="Btn_MathBlock"/>
+                                    <MenuItem Header="Tabla de contenidos" Click="Btn_TOC"/>
+                                </MenuItem>
+                                <Separator/>
+                                <!-- Tabla (solo visible en contexto tabla) -->
+                                <MenuItem Header="Tabla" x:Name="ContextTableMenu" Visibility="Collapsed">
+                                    <MenuItem Header="Agregar fila" Click="TableAddRow_Click"/>
+                                    <MenuItem Header="Agregar columna" Click="TableAddCol_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="Eliminar fila" Click="TableDeleteRow_Click"/>
+                                    <MenuItem Header="Eliminar columna" Click="TableDeleteCol_Click"/>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Buscar..." Click="Btn_Find" InputGestureText="Ctrl+F"/>
+                            </ContextMenu>
+                        </avalonedit:TextEditor.ContextMenu>
+                    </avalonedit:TextEditor>
+
+                    <!-- SPLITTER between editor and preview -->
+                    <GridSplitter Grid.Column="1" x:Name="EditorPreviewSplitter"
+                                  Width="2" HorizontalAlignment="Stretch"
+                                  Background="{DynamicResource BorderBrush}"
+                                  ResizeBehavior="PreviousAndNext"/>
+
+                    <!-- PREVIEW (FlowDocument - used in Split/Preview modes) -->
+                    <FlowDocumentScrollViewer
+                        Grid.Column="2"
+                        x:Name="PreviewViewer"
+                        VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
+                        Background="{DynamicResource BackgroundBrush}"
+                        Padding="0"/>
+
+                    <!-- WYSIWYG Preview (WebView2 - used in WYSIWYG mode) -->
+                    <wv2:WebView2
+                        Grid.Column="2"
+                        x:Name="PreviewWebView"
+                        Visibility="Collapsed"
+                        DefaultBackgroundColor="Transparent"/>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- STATUS BAR -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <StatusBar Grid.Row="4" x:Name="StatusBarMain">
+            <StatusBarItem x:Name="StatusFilePath" Content="Sin título" Margin="4,0"/>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock x:Name="StatusWords"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock x:Name="StatusLines"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock x:Name="StatusChars"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock x:Name="StatusCursor"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock x:Name="StatusFontSize" Text="14px"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right" Margin="0,0,8,0">
+                <TextBlock x:Name="StatusTheme" Text="🌙 Oscuro"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right" Margin="0,0,4,0">
+                <TextBlock x:Name="StatusViewMode" Text="Split"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
