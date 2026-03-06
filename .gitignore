@@ -35,3 +35,6 @@ Desktop.ini
 
 ## WebView2
 *.exe.WebView2/
+
+## Installer output
+dist/
