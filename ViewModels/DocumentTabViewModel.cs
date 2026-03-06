@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using PlannamTypora.Models;
+using QuillMD.Models;
 
-namespace PlannamTypora.ViewModels
+namespace QuillMD.ViewModels
 {
     public partial class DocumentTabViewModel : ObservableObject
     {

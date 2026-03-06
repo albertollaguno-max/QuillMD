@@ -18,7 +18,7 @@ using MdTable = Markdig.Extensions.Tables.Table;
 using MdTableRow = Markdig.Extensions.Tables.TableRow;
 using MdTableCell = Markdig.Extensions.Tables.TableCell;
 
-namespace PlannamTypora.Services
+namespace QuillMD.Services
 {
     public static class MarkdownConverter
     {

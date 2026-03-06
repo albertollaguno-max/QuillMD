@@ -1,6 +1,6 @@
-# PlannamTypora
+# QuillMD
 
-Editor de Markdown para Windows inspirado en [Typora](https://typora.io/), construido con WPF (.NET 9).
+Editor de Markdown WYSIWYG para Windows, construido con WPF (.NET 9).
 
 ![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D4)
@@ -19,7 +19,7 @@ Editor de Markdown para Windows inspirado en [Typora](https://typora.io/), const
 ### Formato
 - **Inline**: negrita, cursiva, tachado, código inline, enlaces, imágenes
 - **Bloques**: encabezados H1-H6, párrafo, citas, listas (viñetas, numeradas, tareas), bloques de código, ecuaciones, líneas horizontales
-- **Tablas**: inserción, edición de celdas, agregar/eliminar filas y columnas, mover filas/columnas, alineación de texto por columna, barra flotante de herramientas al estilo Typora
+- **Tablas**: inserción, edición de celdas, agregar/eliminar filas y columnas, mover filas/columnas, alineación de texto por columna, barra flotante de herramientas con barra flotante
 - Notas al pie y tabla de contenidos automática
 
 ### Interfaz
@@ -71,7 +71,7 @@ dotnet run
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:TrimMode=partial
 ```
 
-Genera un único `PlannamTypora.exe` portable que no requiere .NET instalado en la máquina destino.
+Genera un único `QuillMD.exe` portable que no requiere .NET instalado en la máquina destino.
 
 El ejecutable se genera en `bin/Release/net9.0-windows/win-x64/publish/`.
 
@@ -93,7 +93,7 @@ Consulta el archivo [HELP.md](HELP.md) para la lista completa de atajos y guía 
 ## Estructura del proyecto
 
 ```
-PlannamTypora/
+QuillMD/
 ├── MainWindow.xaml          # Layout principal (XAML)
 ├── MainWindow.xaml.cs       # Lógica principal
 ├── App.xaml / App.xaml.cs   # Configuración de la aplicación y temas

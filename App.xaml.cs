@@ -2,15 +2,16 @@ using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 
-namespace PlannamTypora
+namespace QuillMD
 {
     public partial class App : Application
     {
         public static bool IsDarkTheme { get; private set; } = true;
+        public static string? StartupFilePath { get; private set; }
 
         // Log path: same folder as the exe, easy to find
         public static readonly string LogPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "PlannamTypora_crash.log");
+            AppDomain.CurrentDomain.BaseDirectory, "QuillMD_crash.log");
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -26,15 +27,19 @@ namespace PlannamTypora
                     $"Error inesperado:\n\n{ex.Exception.Message}\n\n" +
                     $"Tipo: {ex.Exception.GetType().FullName}\n\n" +
                     $"(Log guardado en: {LogPath})",
-                    "Error — PlannamTypora",
+                    "Error — QuillMD",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             };
 
             TaskScheduler.UnobservedTaskException += (s, ex) =>
                 LogFatal("TaskScheduler.UnobservedTaskException", ex.Exception);
 
+            // Capture file path from command-line arguments
+            if (e.Args.Length > 0 && File.Exists(e.Args[0]))
+                StartupFilePath = e.Args[0];
+
             // Log startup
-            Log("=== PlannamTypora started ===");
+            Log($"=== QuillMD started === args=[{string.Join(", ", e.Args)}]");
             base.OnStartup(e);
         }
 

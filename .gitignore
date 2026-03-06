@@ -34,4 +34,4 @@ Desktop.ini
 .DS_Store
 
 ## WebView2
-PlannamTypora.exe.WebView2/
+*.exe.WebView2/

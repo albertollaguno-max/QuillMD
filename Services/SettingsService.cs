@@ -1,13 +1,13 @@
 using System.IO;
 using System.Text.Json;
 
-namespace PlannamTypora.Services
+namespace QuillMD.Services
 {
     public static class SettingsService
     {
         private static readonly string SettingsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "PlannamTypora", "settings.json");
+            "QuillMD", "settings.json");
 
         public static AppSettings Load()
         {

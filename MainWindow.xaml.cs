@@ -12,13 +12,13 @@ using CommunityToolkit.Mvvm.Input;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using ICSharpCode.AvalonEdit.Search;
-using PlannamTypora.Models;
-using PlannamTypora.Services;
-using PlannamTypora.ViewModels;
+using QuillMD.Models;
+using QuillMD.Services;
+using QuillMD.ViewModels;
 using Markdig;
 using System.Xml;
 
-namespace PlannamTypora
+namespace QuillMD
 {
     public partial class MainWindow : Window
     {
@@ -143,9 +143,26 @@ namespace PlannamTypora
             foreach (var f in recent) RecentFiles.Add(f);
             App.Log($"Loaded {recent.Count} recent files");
 
-            App.Log("Opening blank tab...");
-            NewTab();
-            App.Log("Blank tab opened");
+            // Open file from command line or blank tab
+            if (!string.IsNullOrEmpty(App.StartupFilePath))
+            {
+                App.Log($"Opening startup file: {App.StartupFilePath}");
+                string? content = FileService.ReadFile(App.StartupFilePath);
+                if (content != null)
+                {
+                    NewTab(App.StartupFilePath, content);
+                    AddToRecent(App.StartupFilePath);
+                }
+                else
+                {
+                    NewTab();
+                }
+            }
+            else
+            {
+                NewTab();
+            }
+            App.Log("Initial tab opened");
 
             // Editor cursor tracking
             Editor.TextArea.Caret.PositionChanged += (s, e) => UpdateStatusBar();
@@ -307,7 +324,7 @@ namespace PlannamTypora
             {
                 App.Log("  Getting manifest resource stream...");
                 using var stream = Assembly.GetExecutingAssembly()
-                    .GetManifestResourceStream("PlannamTypora.Services.MarkdownHighlighting.xshd");
+                    .GetManifestResourceStream("QuillMD.Services.MarkdownHighlighting.xshd");
                 App.Log($"  Stream is {(stream == null ? "NULL" : "OK")}");
                 if (stream != null)
                 {
@@ -1433,7 +1450,7 @@ namespace PlannamTypora
             string file = _activeTab.Document.IsNewFile
                 ? "Sin título"
                 : _activeTab.Document.FilePath;
-            Title = $"{_activeTab.TabTitle}{dirty} — PlannamTypora";
+            Title = $"{_activeTab.TabTitle}{dirty} — QuillMD";
             StatusFilePath.Content = file;
         }
 
@@ -1458,8 +1475,8 @@ namespace PlannamTypora
         private void ShowAbout()
         {
             MessageBox.Show(
-                "PlannamTypora v1.0\n\nEditor Markdown WYSIWYG nativo para Windows.\n\nTecnología: C# WPF + AvalonEdit + Markdig\n\n© 2026 Plannam",
-                "Acerca de PlannamTypora",
+                "QuillMD v1.0\n\nEditor Markdown WYSIWYG nativo para Windows.\n\nTecnología: C# WPF + AvalonEdit + Markdig\n\n© 2026 QuillMD",
+                "Acerca de QuillMD",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }

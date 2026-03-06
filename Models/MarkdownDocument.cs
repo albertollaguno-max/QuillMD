@@ -1,4 +1,4 @@
-namespace PlannamTypora.Models
+namespace QuillMD.Models
 {
     public class MarkdownDocument
     {

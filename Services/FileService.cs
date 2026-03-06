@@ -2,7 +2,7 @@ using System.IO;
 using System.Windows;
 using Microsoft.Win32;
 
-namespace PlannamTypora.Services
+namespace QuillMD.Services
 {
     public class FileService
     {
@@ -110,7 +110,7 @@ namespace PlannamTypora.Services
         private static string GetSettingsPath()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string dir = Path.Combine(appData, "PlannamTypora");
+            string dir = Path.Combine(appData, "QuillMD");
             Directory.CreateDirectory(dir);
             return Path.Combine(dir, "recent.txt");
         }

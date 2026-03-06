@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Document;
 
-namespace PlannamTypora.Services
+namespace QuillMD.Services
 {
     public static class TableEditHelper
     {

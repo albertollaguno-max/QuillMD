@@ -1,6 +1,6 @@
 using Markdig;
 
-namespace PlannamTypora.Services
+namespace QuillMD.Services
 {
     public static class WebPreviewBridge
     {

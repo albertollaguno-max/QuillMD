@@ -5,14 +5,14 @@
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
-    <AssemblyName>PlannamTypora</AssemblyName>
-    <RootNamespace>PlannamTypora</RootNamespace>
+    <AssemblyName>QuillMD</AssemblyName>
+    <RootNamespace>QuillMD</RootNamespace>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
-    <AssemblyTitle>PlannamTypora</AssemblyTitle>
+    <AssemblyTitle>QuillMD</AssemblyTitle>
     <AssemblyDescription>Editor Markdown WYSIWYG para Windows</AssemblyDescription>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Company>Plannam</Company>
+    <Company>QuillMD</Company>
     <Platforms>x64</Platforms>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>

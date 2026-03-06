@@ -1,4 +1,4 @@
-namespace PlannamTypora.Services
+namespace QuillMD.Services
 {
     public static class HtmlToMarkdown
     {

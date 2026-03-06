@@ -1,8 +1,8 @@
-# PlannamTypora - Guía de uso
+# QuillMD - Guía de uso
 
 ## Modos de visualización
 
-PlannamTypora ofrece cuatro modos de trabajo, accesibles desde el menú **Visualización** o la barra de herramientas:
+QuillMD ofrece cuatro modos de trabajo, accesibles desde el menú **Visualización** o la barra de herramientas:
 
 | Modo | Descripción |
 |---|---|
@@ -136,7 +136,7 @@ Cambia entre tema claro y oscuro desde:
 
 ## Configuración persistente
 
-PlannamTypora guarda automáticamente al cerrar:
+QuillMD guarda automáticamente al cerrar:
 - Tema activo
 - Modo de visualización
 - Estado de la barra lateral (visible/oculta y ancho)
@@ -145,4 +145,4 @@ PlannamTypora guarda automáticamente al cerrar:
 - Estado de la barra de estado
 - Opción "Siempre encima"
 
-La configuración se almacena en `%AppData%/PlannamTypora/settings.json`.
+La configuración se almacena en `%AppData%/QuillMD/settings.json`.
