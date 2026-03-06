@@ -48,22 +48,32 @@ Editor de Markdown para Windows inspirado en [Typora](https://typora.io/), const
 ## Compilar
 
 ```bash
-# Debug
+# Debug (desarrollo)
 dotnet build
 
-# Release (ejecutable independiente)
-dotnet publish -c Release -r win-x64 --self-contained
-```
-
-El ejecutable se genera en `bin/Release/net9.0-windows/win-x64/publish/`.
-
-## Ejecutar
-
-```bash
+# Ejecutar en desarrollo
 dotnet run
 ```
 
-O abrir directamente el `.exe` generado en la carpeta de publicación.
+### Modos de publicación
+
+| Modo | Comando | Archivo EXE | Tamaño aprox. | Requiere .NET instalado | Notas |
+|---|---|---|---|---|---|
+| **Debug** | `dotnet build` | No (usa `dotnet run`) | N/A | Si | Para desarrollo |
+| **Release estándar** | `dotnet publish -c Release` | Si (+ DLLs) | ~5 MB + deps | Si | Requiere .NET 9 en el destino |
+| **Self-contained** | `dotnet publish -c Release -r win-x64 --self-contained` | Si (+ DLLs) | ~150 MB | No | Incluye runtime .NET completo |
+| **Single file** | `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true` | Si (1 archivo) | ~150 MB | No | Todo en un solo .exe |
+| **Single file + Trim** | `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:TrimMode=partial` | Si (1 archivo) | ~80-100 MB | No | Elimina código no usado del runtime |
+
+**Recomendado para distribución:**
+
+```bash
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:TrimMode=partial
+```
+
+Genera un único `PlannamTypora.exe` portable que no requiere .NET instalado en la máquina destino.
+
+El ejecutable se genera en `bin/Release/net9.0-windows/win-x64/publish/`.
 
 ## Atajos de teclado
 
