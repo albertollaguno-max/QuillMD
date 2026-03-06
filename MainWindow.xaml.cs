@@ -290,9 +290,9 @@ namespace PlannamTypora
 
                 App.Log("WebView2 initialized OK");
 
-                // If WYSIWYG was the saved view mode, refresh now that WebView2 is ready
+                // If WYSIWYG was the saved view mode, apply it now that WebView2 is ready
                 if (_currentViewMode == "WYSIWYG")
-                    RefreshWysiwygPreview();
+                    SetViewMode("WYSIWYG");
             }
             catch (Exception ex)
             {
@@ -670,6 +670,11 @@ namespace PlannamTypora
         {
             RefreshOutline();
             if (_currentViewMode == "Editor") return;
+            if (_currentViewMode == "WYSIWYG")
+            {
+                RefreshWysiwygPreview();
+                return;
+            }
             try
             {
                 App.Log("RefreshPreview: calling ToFlowDocument...");
@@ -939,6 +944,39 @@ namespace PlannamTypora
             Editor.Focus();
         }
 
+        private void PrefixSelectedLines(string? prefix, bool numbered = false)
+        {
+            string selected = Editor.SelectedText;
+            int selStart = Editor.SelectionStart;
+            int selLen = Editor.SelectionLength;
+
+            if (selLen > 0)
+            {
+                // Multi-line: prefix each line in the selection
+                var lines = selected.Split('\n');
+                var sb = new System.Text.StringBuilder();
+                int num = 1;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (i > 0) sb.Append('\n');
+                    string p = numbered ? $"{num++}. " : prefix!;
+                    sb.Append(p);
+                    sb.Append(lines[i]);
+                }
+                string result = sb.ToString();
+                Editor.Document.Replace(selStart, selLen, result);
+                Editor.Select(selStart, result.Length);
+            }
+            else
+            {
+                // No selection: prefix current line
+                string p = numbered ? "1. " : prefix!;
+                var line = Editor.Document.GetLineByOffset(Editor.CaretOffset);
+                Editor.Document.Insert(line.Offset, p);
+                SafeSetCaret(Editor.CaretOffset + p.Length);
+            }
+        }
+
         private void InsertList(string? type)
         {
             if (IsWysiwygMode)
@@ -946,34 +984,16 @@ namespace PlannamTypora
                 ExecuteWysiwygScript(type == "ordered" ? "formatOrderedList()" : "formatUnorderedList()");
                 return;
             }
-            var line = Editor.Document.GetLineByOffset(Editor.CaretOffset);
-            string currentLine = Editor.Document.GetText(line.Offset, line.Length);
-            string prefix = type == "ordered" ? "1. " : "- ";
-
-            if (string.IsNullOrEmpty(currentLine))
-            {
-                int pos = Editor.CaretOffset;
-                Editor.Document.Insert(pos, prefix);
-                SafeSetCaret(pos + prefix.Length);
-            }
+            if (type == "ordered")
+                PrefixSelectedLines(null, numbered: true);
             else
-            {
-                string newLine = prefix + currentLine;
-                Editor.Document.Replace(line.Offset, line.Length, newLine);
-                SafeSetCaret(line.Offset + newLine.Length);
-            }
-            Editor.Focus();
+                PrefixSelectedLines("- ");
         }
 
         private void InsertBlockquote()
         {
             if (IsWysiwygMode) { ExecuteWysiwygScript("formatBlockquote()"); return; }
-            var line = Editor.Document.GetLineByOffset(Editor.CaretOffset);
-            string currentLine = Editor.Document.GetText(line.Offset, line.Length);
-            string newLine = "> " + currentLine;
-            Editor.Document.Replace(line.Offset, line.Length, newLine);
-            SafeSetCaret(line.Offset + newLine.Length);
-            Editor.Focus();
+            PrefixSelectedLines("> ");
         }
 
         private void InsertLink()
@@ -1110,23 +1130,8 @@ namespace PlannamTypora
 
         private void InsertTaskList()
         {
-            var line = Editor.Document.GetLineByOffset(Editor.CaretOffset);
-            string currentLine = Editor.Document.GetText(line.Offset, line.Length);
-            string prefix = "- [ ] ";
-
-            if (string.IsNullOrEmpty(currentLine))
-            {
-                int pos = Editor.CaretOffset;
-                Editor.Document.Insert(pos, prefix);
-                SafeSetCaret(pos + prefix.Length);
-            }
-            else
-            {
-                string newLine = prefix + currentLine;
-                Editor.Document.Replace(line.Offset, line.Length, newLine);
-                SafeSetCaret(line.Offset + newLine.Length);
-            }
-            Editor.Focus();
+            if (IsWysiwygMode) { ExecuteWysiwygScript("formatTaskList()"); return; }
+            PrefixSelectedLines("- [ ] ");
         }
 
         // ─────────────────── Clipboard Advanced ───────────────────
@@ -1677,10 +1682,10 @@ namespace PlannamTypora
         private void Btn_H4(object s, RoutedEventArgs e)            { Editor.Focus(); InsertHeading("4"); }
         private void Btn_H5(object s, RoutedEventArgs e)            { Editor.Focus(); InsertHeading("5"); }
         private void Btn_H6(object s, RoutedEventArgs e)            { Editor.Focus(); InsertHeading("6"); }
-        private void Btn_UList(object s, RoutedEventArgs e)         { Editor.Focus(); InsertList("unordered"); }
-        private void Btn_OList(object s, RoutedEventArgs e)         { Editor.Focus(); InsertList("ordered"); }
-        private void Btn_TaskList(object s, RoutedEventArgs e)      { Editor.Focus(); InsertTaskList(); }
-        private void Btn_Quote(object s, RoutedEventArgs e)         { Editor.Focus(); InsertBlockquote(); }
+        private void Btn_UList(object s, RoutedEventArgs e)         { InsertList("unordered"); Editor.Focus(); }
+        private void Btn_OList(object s, RoutedEventArgs e)         { InsertList("ordered"); Editor.Focus(); }
+        private void Btn_TaskList(object s, RoutedEventArgs e)      { InsertTaskList(); Editor.Focus(); }
+        private void Btn_Quote(object s, RoutedEventArgs e)         { InsertBlockquote(); Editor.Focus(); }
         private void Btn_Link(object s, RoutedEventArgs e)          { Editor.Focus(); InsertLink(); }
         private void Btn_Hr(object s, RoutedEventArgs e)            { Editor.Focus(); InsertHr(); }
         private void Btn_Table(object s, RoutedEventArgs e)         { Editor.Focus(); InsertTable(); }

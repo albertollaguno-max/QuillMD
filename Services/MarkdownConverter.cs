@@ -220,11 +220,17 @@ namespace PlannamTypora.Services
 
         private static System.Windows.Documents.List ConvertList(ListBlock lb, bool isDark)
         {
+            // Detect task list: first item contains a TaskList inline
+            bool isTaskList = lb.OfType<ListItemBlock>().Any(item =>
+                item.OfType<ParagraphBlock>().Any(p =>
+                    p.Inline?.Any(i => i is Markdig.Extensions.TaskLists.TaskList) == true));
+
             var list = new System.Windows.Documents.List
             {
                 Margin = new Thickness(0, 4, 0, 8),
                 Padding = new Thickness(24, 0, 0, 0),
-                MarkerStyle = lb.IsOrdered ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc
+                MarkerStyle = isTaskList ? TextMarkerStyle.None
+                    : lb.IsOrdered ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc
             };
 
             foreach (var item in lb.OfType<ListItemBlock>())
@@ -499,6 +505,17 @@ namespace PlannamTypora.Services
                     foreach (var child in container)
                         foreach (var wpfChild in ConvertInline(child, isDark))
                             yield return wpfChild;
+                    break;
+
+                case Markdig.Extensions.TaskLists.TaskList taskItem:
+                    var cb = new System.Windows.Controls.CheckBox
+                    {
+                        IsChecked = taskItem.Checked,
+                        IsHitTestVisible = false,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(0, 0, 4, 0)
+                    };
+                    yield return new InlineUIContainer(cb) { BaselineAlignment = BaselineAlignment.Center };
                     break;
 
                 case Markdig.Extensions.Footnotes.FootnoteLink fl:

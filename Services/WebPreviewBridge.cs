@@ -358,6 +358,32 @@ namespace PlannamTypora.Services
                 notifyChange();
             }
 
+            function formatTaskList() {
+                document.execCommand('insertUnorderedList');
+                // Convert each <li> in the current list to task-list items with checkboxes
+                const sel = window.getSelection();
+                if (sel.rangeCount) {
+                    let node = sel.anchorNode;
+                    while (node && node !== editor) {
+                        if (node.nodeName === 'UL') break;
+                        node = node.parentNode;
+                    }
+                    if (node && node.nodeName === 'UL') {
+                        node.classList.add('contains-task-list');
+                        node.querySelectorAll('li').forEach(li => {
+                            if (!li.querySelector('input[type=checkbox]')) {
+                                li.classList.add('task-list-item');
+                                const cb = document.createElement('input');
+                                cb.type = 'checkbox';
+                                cb.style.marginRight = '8px';
+                                li.insertBefore(cb, li.firstChild);
+                            }
+                        });
+                    }
+                }
+                notifyChange();
+            }
+
             function formatHr() {
                 document.execCommand('insertHorizontalRule');
                 notifyChange();
@@ -965,6 +991,7 @@ namespace PlannamTypora.Services
                 blockquote: formatBlockquote,
                 ulist: formatUnorderedList,
                 olist: formatOrderedList,
+                tasklist: formatTaskList,
                 image: insertImage,
                 hr: formatHr,
                 table: () => insertTable(3,3),
