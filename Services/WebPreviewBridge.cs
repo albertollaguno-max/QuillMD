@@ -21,9 +21,10 @@ namespace QuillMD.Services
 <meta charset='utf-8'>
 <style>{css}</style>
 </head>
-<body {editableAttr} id='editor'>
+<body>
+<div {editableAttr} id='editor'>
 {body}
-</body>
+</div>
 {(editable ? $@"<div class='input-overlay' id='inputOverlay'>
   <div class='input-dialog'>
     <label id='inputLabel'>URL:</label>
@@ -43,12 +44,14 @@ namespace QuillMD.Services
   <button id='tbDeleteTable' class='tb-danger' title='Eliminar tabla'><svg width='16' height='16' viewBox='0 0 16 16'><path d='M5 2V1h6v1h3v1.5H2V2h3zM3 5h10l-.7 9.5H3.7L3 5zm3 1.5v6h1v-6H6zm3 0v6h1v-6H9z' fill='currentColor'/></svg></button>
 </div>
 <script>{script}</script>" : "")}
+</body>
 </html>";
         }
 
         private static string GetDarkCss() => @"
             body { background: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', Calibri, sans-serif;
-                   font-size: 15px; line-height: 1.7; padding: 40px; margin: 0; }
+                   font-size: 15px; line-height: 1.7; margin: 0; padding: 0; }
+            #editor { padding: 40px; min-height: 100vh; box-sizing: border-box; outline: none; }
             h1, h2, h3, h4, h5, h6 { color: #569cd6; font-weight: 600; margin-top: 1.2em; margin-bottom: 0.4em; }
             h1 { font-size: 1.8em; border-bottom: 1.5px solid #3c3c3c; padding-bottom: 8px; }
             h2 { font-size: 1.5em; border-bottom: 1px solid #3c3c3c; padding-bottom: 4px; }
@@ -128,7 +131,8 @@ namespace QuillMD.Services
 
         private static string GetLightCss() => @"
             body { background: #fafafa; color: #242424; font-family: 'Segoe UI', Calibri, sans-serif;
-                   font-size: 15px; line-height: 1.7; padding: 40px; margin: 0; }
+                   font-size: 15px; line-height: 1.7; margin: 0; padding: 0; }
+            #editor { padding: 40px; min-height: 100vh; box-sizing: border-box; outline: none; }
             h1, h2, h3, h4, h5, h6 { color: #0064b4; font-weight: 600; margin-top: 1.2em; margin-bottom: 0.4em; }
             h1 { font-size: 1.8em; border-bottom: 1.5px solid #ddd; padding-bottom: 8px; }
             h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 4px; }

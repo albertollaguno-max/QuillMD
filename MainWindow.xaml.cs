@@ -780,8 +780,35 @@ namespace QuillMD
         }
 
         // ─────────────────── View Mode ───────────────────
-        private void SetViewMode(string? mode)
+        private async Task SyncWysiwygToEditor()
         {
+            if (!_webViewReady || PreviewWebView.CoreWebView2 == null) return;
+            try
+            {
+                string result = await PreviewWebView.CoreWebView2.ExecuteScriptAsync("document.getElementById('editor').innerHTML");
+                string html = System.Text.Json.JsonSerializer.Deserialize<string>(result) ?? "";
+                string markdown = HtmlToMarkdown.Convert(html);
+
+                _suppressTextChanged = true;
+                Editor.Text = markdown;
+                _suppressTextChanged = false;
+
+                if (_activeTab != null)
+                {
+                    _activeTab.Document.Content = markdown;
+                }
+            }
+            catch (Exception ex) { App.LogFatal("SyncWysiwygToEditor", ex); }
+        }
+
+        private async void SetViewMode(string? mode)
+        {
+            // Sync WYSIWYG content back to editor BEFORE switching modes
+            if (_currentViewMode == "WYSIWYG" && mode != "WYSIWYG")
+            {
+                await SyncWysiwygToEditor();
+            }
+
             _currentViewMode = mode ?? "Split";
 
             // Hide WebView by default, show only in WYSIWYG
