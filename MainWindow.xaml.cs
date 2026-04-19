@@ -69,12 +69,14 @@ namespace QuillMD
         public IRelayCommand<string> OpenRecentCommand { get; }
         public ICommand ShowAboutCommand { get; }
         public ICommand ShowMarkdownHelpCommand { get; }
+        public ICommand ShowThirdPartyNoticesCommand { get; }
         public ICommand ParagraphCommand { get; }
         public ICommand CopyAsMarkdownCommand { get; }
         public ICommand PastePlainTextCommand { get; }
         public ICommand FullscreenCommand { get; }
         public ICommand FocusModeCommand { get; }
         public ICommand InsertTableCommand { get; }
+        public ICommand ImportCommand { get; }
 
         public MainWindow()
         {
@@ -83,6 +85,7 @@ namespace QuillMD
             // Initialize commands
             NewTabCommand = new RelayCommand(() => NewTab());
             OpenFileCommand = new RelayCommand(OpenFile);
+            ImportCommand = new RelayCommand(async () => await ImportDocument());
             OpenFolderCommand = new RelayCommand(OpenFolder);
             SaveCommand = new RelayCommand(Save);
             SaveAsCommand = new RelayCommand(SaveAs);
@@ -115,6 +118,7 @@ namespace QuillMD
             OpenRecentCommand = new RelayCommand<string>(OpenRecentFile);
             ShowAboutCommand = new RelayCommand(ShowAbout);
             ShowMarkdownHelpCommand = new RelayCommand(ShowMarkdownHelp);
+            ShowThirdPartyNoticesCommand = new RelayCommand(ShowThirdPartyNotices);
             ParagraphCommand = new RelayCommand(ConvertToParagraph);
             CopyAsMarkdownCommand = new RelayCommand(CopyAsMarkdown);
             PastePlainTextCommand = new RelayCommand(PastePlainText);
@@ -264,7 +268,7 @@ namespace QuillMD
                                 {
                                     _activeTab.Document.Content = markdown;
                                     _activeTab.IsDirty = true;
-                                    _activeTab.TabTitle = _activeTab.Document.FileName + " ●";
+                                    _activeTab.TabTitle = GetDisplayName(_activeTab) + " ●";
                                     UpdateTitle();
                                 }
                             });
@@ -342,25 +346,36 @@ namespace QuillMD
         }
 
         // ─────────────────── Tab Management ───────────────────
-        private void NewTab(string? filePath = null, string? content = null)
+        private static string GetDisplayName(TabModel tab)
         {
-            App.Log($"NewTab: filePath={filePath ?? "(new)"}"
-);
+            if (!tab.Document.IsNewFile) return tab.Document.FileName;
+            if (!string.IsNullOrEmpty(tab.SuggestedSavePath))
+                return System.IO.Path.GetFileNameWithoutExtension(tab.SuggestedSavePath);
+            return tab.Document.FileName;
+        }
+
+        private TabModel NewTab(string? filePath = null, string? content = null, string? suggestedSavePath = null, bool markDirty = false)
+        {
+            App.Log($"NewTab: filePath={filePath ?? "(new)"} suggested={suggestedSavePath ?? "(none)"}");
             var doc = new MarkdownDocument
             {
                 FilePath = filePath ?? string.Empty,
-                Content = content ?? string.Empty
+                Content = content ?? string.Empty,
+                IsDirty = markDirty
             };
 
             var tab = new TabModel
             {
                 Document = doc,
-                TabTitle = doc.FileName,
-                IsActive = false
+                IsActive = false,
+                IsDirty = markDirty,
+                SuggestedSavePath = suggestedSavePath
             };
+            tab.TabTitle = GetDisplayName(tab) + (markDirty ? " ●" : "");
 
             Tabs.Add(tab);
             ActivateTab(tab);
+            return tab;
         }
 
         private void ActivateTab(TabModel tab)
@@ -455,6 +470,136 @@ namespace QuillMD
             App.Log("OpenFile: done");
         }
 
+        private async System.Threading.Tasks.Task ImportDocument()
+        {
+            App.Log("ImportDocument: showing dialog");
+
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Importar documento",
+                Filter = QuillMD.Services.ImportService.OpenFileDialogFilter,
+                FilterIndex = 1
+            };
+            if (dialog.ShowDialog() != true) { App.Log("ImportDocument: cancelled"); return; }
+
+            string path = dialog.FileName;
+            await ImportFromPath(path);
+        }
+
+        private async System.Threading.Tasks.Task ImportFromPath(string path)
+        {
+            App.Log($"ImportFromPath: {path}");
+
+            if (!QuillMD.Services.ImportService.IsImportable(path))
+            {
+                MessageBox.Show(
+                    $"El formato de \"{System.IO.Path.GetFileName(path)}\" no es importable.",
+                    "Formato no soportado",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            using var cts = new System.Threading.CancellationTokenSource();
+            var progress = new QuillMD.Views.ImportProgressDialog(path, cts) { Owner = this };
+
+            QuillMD.Services.ConversionResult? result = null;
+            progress.Loaded += async (_, _) =>
+            {
+                try
+                {
+                    result = await QuillMD.Services.MarkItDownService.ConvertAsync(path, cts.Token);
+                }
+                finally
+                {
+                    progress.Dispatcher.Invoke(() => progress.AutoClose());
+                }
+            };
+
+            await System.Threading.Tasks.Task.Yield(); // ensure UI is ready before blocking ShowDialog
+            progress.ShowDialog();
+
+            if (result == null || result.Status == QuillMD.Services.ConversionStatus.Cancelled)
+            {
+                App.Log("ImportFromPath: cancelled");
+                return;
+            }
+
+            if (result.Status != QuillMD.Services.ConversionStatus.Success)
+            {
+                App.Log($"ImportFromPath: failed — {result.Status}");
+                MessageBox.Show(
+                    result.ErrorMessage,
+                    "Error al importar",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            string suggestedPath = QuillMD.Services.ImportService.SuggestedMarkdownPath(path);
+            App.Log($"ImportFromPath: success, creating tab (suggest={suggestedPath})");
+            NewTab(filePath: null, content: result.Markdown, suggestedSavePath: suggestedPath, markDirty: true);
+        }
+
+        private void Window_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files != null && files.Length > 0)
+                {
+                    string ext = System.IO.Path.GetExtension(files[0]).ToLowerInvariant();
+                    bool isMd = ext == ".md" || ext == ".markdown" || ext == ".txt";
+                    bool isImportable = QuillMD.Services.ImportService.IsImportable(files[0]);
+                    if (isMd || isImportable)
+                    {
+                        e.Effects = DragDropEffects.Copy;
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            }
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private async void Window_Drop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files == null || files.Length == 0) return;
+
+                if (files.Length > 1)
+                    App.Log($"Window_Drop: {files.Length} archivos arrastrados; solo se procesa el primero.");
+
+                string path = files[0];
+                string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+
+                if (ext == ".md" || ext == ".markdown" || ext == ".txt")
+                {
+                    // Flujo clásico: abrir como texto
+                    var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
+                    if (existing != null) { ActivateTab(existing); return; }
+                    string? content = FileService.ReadFile(path);
+                    if (content == null) return;
+                    NewTab(path, content);
+                    AddToRecent(path);
+                    return;
+                }
+
+                if (QuillMD.Services.ImportService.IsImportable(path))
+                {
+                    await ImportFromPath(path);
+                }
+            }
+            catch (Exception ex)
+            {
+                App.Log($"Window_Drop: error inesperado — {ex}");
+                MessageBox.Show($"Error inesperado al procesar el archivo:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void OpenRecentFile(string? path)
         {
             if (string.IsNullOrEmpty(path)) return;
@@ -505,7 +650,14 @@ namespace QuillMD
         private void SaveAs()
         {
             if (_activeTab == null) return;
-            string? path = FileService.SaveFileAs(_activeTab.Document.IsNewFile ? null : _activeTab.Document.FilePath);
+
+            string? suggested;
+            if (!_activeTab.Document.IsNewFile)
+                suggested = _activeTab.Document.FilePath;
+            else
+                suggested = _activeTab.SuggestedSavePath;  // null si no hay sugerencia
+
+            string? path = FileService.SaveFileAs(suggested);
             if (path == null) return;
 
             if (FileService.WriteFile(path, Editor.Text))
@@ -513,6 +665,7 @@ namespace QuillMD
                 _activeTab.Document.FilePath = path;
                 _activeTab.Document.Content = Editor.Text;
                 _activeTab.IsDirty = false;
+                _activeTab.SuggestedSavePath = null;
                 _activeTab.TabTitle = _activeTab.Document.FileName;
                 AddToRecent(path);
                 UpdateTitle();
@@ -675,7 +828,7 @@ namespace QuillMD
 
             _activeTab.Document.Content = Editor.Text;
             _activeTab.IsDirty = true;
-            _activeTab.TabTitle = _activeTab.Document.FileName + " ●";
+            _activeTab.TabTitle = GetDisplayName(_activeTab) + " ●";
             UpdateStatusBar();
 
             // Debounced preview refresh
@@ -1499,10 +1652,36 @@ namespace QuillMD
         }
 
         // ─────────────────── About / Help ───────────────────
+        private void ShowThirdPartyNotices()
+        {
+            string path = System.IO.Path.Combine(AppContext.BaseDirectory, "markitdown", "THIRD-PARTY-NOTICES.md");
+            if (!System.IO.File.Exists(path))
+            {
+                MessageBox.Show(
+                    "No se encontró THIRD-PARTY-NOTICES.md.\n\nSe esperaba en:\n" + path,
+                    "Avisos de terceros",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo abrir el archivo:\n{ex.Message}",
+                    "Avisos de terceros", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void ShowAbout()
         {
             MessageBox.Show(
-                "QuillMD v1.0\n\nEditor Markdown WYSIWYG nativo para Windows.\n\nTecnología: C# WPF + AvalonEdit + Markdig\n\n© 2026 QuillMD",
+                "QuillMD v1.1.0\n\nEditor Markdown WYSIWYG nativo para Windows.\n\nTecnología: C# WPF + AvalonEdit + Markdig\n\n© 2026 QuillMD",
                 "Acerca de QuillMD",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -1694,6 +1873,8 @@ namespace QuillMD
             get => _isDirty;
             set { _isDirty = value; OnPropertyChanged(nameof(IsDirty)); }
         }
+
+        public string? SuggestedSavePath { get; set; }
 
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) =>

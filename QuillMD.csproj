@@ -10,8 +10,8 @@
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <AssemblyTitle>QuillMD</AssemblyTitle>
     <AssemblyDescription>Editor Markdown WYSIWYG para Windows</AssemblyDescription>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
     <Company>QuillMD</Company>
     <Platforms>x64</Platforms>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -30,6 +30,14 @@
     <Resource Include="Themes\LightTheme.xaml" />
     <Resource Include="Themes\DarkTheme.xaml" />
     <EmbeddedResource Include="Services\MarkdownHighlighting.xshd" />
+    <None Include="Resources\markitdown\markitdown.exe" Condition="Exists('Resources\markitdown\markitdown.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>markitdown\markitdown.exe</TargetPath>
+    </None>
+    <None Include="Resources\markitdown\THIRD-PARTY-NOTICES.md" Condition="Exists('Resources\markitdown\THIRD-PARTY-NOTICES.md')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>markitdown\THIRD-PARTY-NOTICES.md</TargetPath>
+    </None>
   </ItemGroup>
 
 </Project>

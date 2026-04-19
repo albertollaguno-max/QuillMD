@@ -1,0 +1,37 @@
+<Window x:Class="QuillMD.Views.ImportProgressDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Importando"
+        Width="420" Height="160"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStyle="ToolWindow">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="StatusText"
+                   Grid.Row="0"
+                   Text="Convirtiendo…"
+                   FontSize="14"
+                   TextTrimming="CharacterEllipsis" />
+
+        <ProgressBar Grid.Row="1"
+                     Margin="0,12,0,0"
+                     Height="6"
+                     IsIndeterminate="True" />
+
+        <Button x:Name="CancelButton"
+                Grid.Row="3"
+                Content="Cancelar"
+                Width="100"
+                Height="28"
+                HorizontalAlignment="Right"
+                Click="CancelButton_Click" />
+    </Grid>
+</Window>
