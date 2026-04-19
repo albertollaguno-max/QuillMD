@@ -38,3 +38,7 @@ Desktop.ini
 
 ## Installer output
 dist/
+
+## markitdown bundle (generado por tools/markitdown-bundle/build.ps1)
+Resources/markitdown/*.exe
+Resources/markitdown/THIRD-PARTY-NOTICES.md

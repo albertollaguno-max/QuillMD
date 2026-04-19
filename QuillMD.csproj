@@ -30,6 +30,14 @@
     <Resource Include="Themes\LightTheme.xaml" />
     <Resource Include="Themes\DarkTheme.xaml" />
     <EmbeddedResource Include="Services\MarkdownHighlighting.xshd" />
+    <None Include="Resources\markitdown\markitdown.exe" Condition="Exists('Resources\markitdown\markitdown.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>markitdown\markitdown.exe</TargetPath>
+    </None>
+    <None Include="Resources\markitdown\THIRD-PARTY-NOTICES.md" Condition="Exists('Resources\markitdown\THIRD-PARTY-NOTICES.md')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>markitdown\THIRD-PARTY-NOTICES.md</TargetPath>
+    </None>
   </ItemGroup>
 
 </Project>
