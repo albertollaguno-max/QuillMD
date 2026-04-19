@@ -42,7 +42,7 @@
         <KeyBinding Key="L" Modifiers="Ctrl+Shift" Command="{Binding ToggleSidebarCommand}"/>
         <KeyBinding Key="T" Modifiers="Ctrl" Command="{Binding InsertTableCommand}"/>
         <KeyBinding Key="K" Modifiers="Ctrl+Shift" Command="{Binding FormatCodeBlockCommand}"/>
-        <KeyBinding Key="I" Modifiers="Ctrl+Shift" Command="{Binding FormatImageCommand}"/>
+        <KeyBinding Key="I" Modifiers="Ctrl+Shift" Command="{Binding ImportCommand}"/>
     </Window.InputBindings>
 
     <Grid>
@@ -62,6 +62,9 @@
             <MenuItem Header="Archivo">
                 <MenuItem Header="Nuevo" Command="{Binding NewTabCommand}" InputGestureText="Ctrl+N"/>
                 <MenuItem Header="Abrir..." Command="{Binding OpenFileCommand}" InputGestureText="Ctrl+O"/>
+                <MenuItem Header="_Importar…"
+                          Command="{Binding ImportCommand}"
+                          InputGestureText="Ctrl+Shift+I" />
                 <MenuItem Header="Abrir carpeta..." Command="{Binding OpenFolderCommand}"/>
                 <Separator/>
                 <MenuItem Header="Guardar" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S"/>
