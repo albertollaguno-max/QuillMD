@@ -537,6 +537,55 @@ namespace QuillMD
             NewTab(filePath: null, content: result.Markdown, suggestedSavePath: suggestedPath, markDirty: true);
         }
 
+        private void Window_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files != null && files.Length > 0)
+                {
+                    string ext = System.IO.Path.GetExtension(files[0]).ToLowerInvariant();
+                    bool isMd = ext == ".md" || ext == ".markdown" || ext == ".txt";
+                    bool isImportable = QuillMD.Services.ImportService.IsImportable(files[0]);
+                    if (isMd || isImportable)
+                    {
+                        e.Effects = DragDropEffects.Copy;
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            }
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private async void Window_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files == null || files.Length == 0) return;
+
+            string path = files[0];
+            string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+
+            if (ext == ".md" || ext == ".markdown" || ext == ".txt")
+            {
+                // Flujo clásico: abrir como texto
+                var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
+                if (existing != null) { ActivateTab(existing); return; }
+                string? content = FileService.ReadFile(path);
+                if (content == null) return;
+                NewTab(path, content);
+                AddToRecent(path);
+                return;
+            }
+
+            if (QuillMD.Services.ImportService.IsImportable(path))
+            {
+                await ImportFromPath(path);
+            }
+        }
+
         private void OpenRecentFile(string? path)
         {
             if (string.IsNullOrEmpty(path)) return;
