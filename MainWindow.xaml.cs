@@ -1695,6 +1695,8 @@ namespace QuillMD
             set { _isDirty = value; OnPropertyChanged(nameof(IsDirty)); }
         }
 
+        public string? SuggestedSavePath { get; set; }
+
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) =>
             PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
