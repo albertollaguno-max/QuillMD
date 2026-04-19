@@ -69,6 +69,7 @@ namespace QuillMD
         public IRelayCommand<string> OpenRecentCommand { get; }
         public ICommand ShowAboutCommand { get; }
         public ICommand ShowMarkdownHelpCommand { get; }
+        public ICommand ShowThirdPartyNoticesCommand { get; }
         public ICommand ParagraphCommand { get; }
         public ICommand CopyAsMarkdownCommand { get; }
         public ICommand PastePlainTextCommand { get; }
@@ -117,6 +118,7 @@ namespace QuillMD
             OpenRecentCommand = new RelayCommand<string>(OpenRecentFile);
             ShowAboutCommand = new RelayCommand(ShowAbout);
             ShowMarkdownHelpCommand = new RelayCommand(ShowMarkdownHelp);
+            ShowThirdPartyNoticesCommand = new RelayCommand(ShowThirdPartyNotices);
             ParagraphCommand = new RelayCommand(ConvertToParagraph);
             CopyAsMarkdownCommand = new RelayCommand(CopyAsMarkdown);
             PastePlainTextCommand = new RelayCommand(PastePlainText);
@@ -1638,6 +1640,32 @@ namespace QuillMD
         }
 
         // ─────────────────── About / Help ───────────────────
+        private void ShowThirdPartyNotices()
+        {
+            string path = System.IO.Path.Combine(AppContext.BaseDirectory, "markitdown", "THIRD-PARTY-NOTICES.md");
+            if (!System.IO.File.Exists(path))
+            {
+                MessageBox.Show(
+                    "No se encontró THIRD-PARTY-NOTICES.md.\n\nSe esperaba en:\n" + path,
+                    "Avisos de terceros",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo abrir el archivo:\n{ex.Message}",
+                    "Avisos de terceros", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void ShowAbout()
         {
             MessageBox.Show(

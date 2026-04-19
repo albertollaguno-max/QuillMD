@@ -185,6 +185,9 @@
             <MenuItem Header="Ayuda">
                 <MenuItem Header="Referencia Markdown..." Command="{Binding ShowMarkdownHelpCommand}"/>
                 <Separator/>
+                <MenuItem Header="_Avisos de terceros…"
+                          Command="{Binding ShowThirdPartyNoticesCommand}" />
+                <Separator/>
                 <MenuItem Header="Acerca de QuillMD" Command="{Binding ShowAboutCommand}"/>
             </MenuItem>
         </Menu>
