@@ -266,7 +266,7 @@ namespace QuillMD
                                 {
                                     _activeTab.Document.Content = markdown;
                                     _activeTab.IsDirty = true;
-                                    _activeTab.TabTitle = _activeTab.Document.FileName + " ●";
+                                    _activeTab.TabTitle = GetDisplayName(_activeTab) + " ●";
                                     UpdateTitle();
                                 }
                             });
@@ -344,6 +344,14 @@ namespace QuillMD
         }
 
         // ─────────────────── Tab Management ───────────────────
+        private static string GetDisplayName(TabModel tab)
+        {
+            if (!tab.Document.IsNewFile) return tab.Document.FileName;
+            if (!string.IsNullOrEmpty(tab.SuggestedSavePath))
+                return System.IO.Path.GetFileNameWithoutExtension(tab.SuggestedSavePath);
+            return tab.Document.FileName;
+        }
+
         private TabModel NewTab(string? filePath = null, string? content = null, string? suggestedSavePath = null, bool markDirty = false)
         {
             App.Log($"NewTab: filePath={filePath ?? "(new)"} suggested={suggestedSavePath ?? "(none)"}");
@@ -357,13 +365,11 @@ namespace QuillMD
             var tab = new TabModel
             {
                 Document = doc,
-                TabTitle = string.IsNullOrEmpty(suggestedSavePath)
-                    ? doc.FileName
-                    : System.IO.Path.GetFileNameWithoutExtension(suggestedSavePath) + (markDirty ? " •" : ""),
                 IsActive = false,
                 IsDirty = markDirty,
                 SuggestedSavePath = suggestedSavePath
             };
+            tab.TabTitle = GetDisplayName(tab) + (markDirty ? " ●" : "");
 
             Tabs.Add(tab);
             ActivateTab(tab);
@@ -503,7 +509,7 @@ namespace QuillMD
                 }
                 finally
                 {
-                    progress.AutoClose();
+                    progress.Dispatcher.Invoke(() => progress.AutoClose());
                 }
             };
 
@@ -759,7 +765,7 @@ namespace QuillMD
 
             _activeTab.Document.Content = Editor.Text;
             _activeTab.IsDirty = true;
-            _activeTab.TabTitle = _activeTab.Document.FileName + " ●";
+            _activeTab.TabTitle = GetDisplayName(_activeTab) + " ●";
             UpdateStatusBar();
 
             // Debounced preview refresh
