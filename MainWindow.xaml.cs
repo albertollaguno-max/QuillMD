@@ -75,6 +75,7 @@ namespace QuillMD
         public ICommand FullscreenCommand { get; }
         public ICommand FocusModeCommand { get; }
         public ICommand InsertTableCommand { get; }
+        public ICommand ImportCommand { get; }
 
         public MainWindow()
         {
@@ -83,6 +84,7 @@ namespace QuillMD
             // Initialize commands
             NewTabCommand = new RelayCommand(() => NewTab());
             OpenFileCommand = new RelayCommand(OpenFile);
+            ImportCommand = new RelayCommand(async () => await ImportDocument());
             OpenFolderCommand = new RelayCommand(OpenFolder);
             SaveCommand = new RelayCommand(Save);
             SaveAsCommand = new RelayCommand(SaveAs);
@@ -458,6 +460,75 @@ namespace QuillMD
             NewTab(path, content);
             AddToRecent(path);
             App.Log("OpenFile: done");
+        }
+
+        private async System.Threading.Tasks.Task ImportDocument()
+        {
+            App.Log("ImportDocument: showing dialog");
+
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Importar documento",
+                Filter = QuillMD.Services.ImportService.OpenFileDialogFilter,
+                FilterIndex = 1
+            };
+            if (dialog.ShowDialog() != true) { App.Log("ImportDocument: cancelled"); return; }
+
+            string path = dialog.FileName;
+            await ImportFromPath(path);
+        }
+
+        private async System.Threading.Tasks.Task ImportFromPath(string path)
+        {
+            App.Log($"ImportFromPath: {path}");
+
+            if (!QuillMD.Services.ImportService.IsImportable(path))
+            {
+                MessageBox.Show(
+                    $"El formato de \"{System.IO.Path.GetFileName(path)}\" no es importable.",
+                    "Formato no soportado",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            using var cts = new System.Threading.CancellationTokenSource();
+            var progress = new QuillMD.Views.ImportProgressDialog(path, cts) { Owner = this };
+
+            QuillMD.Services.ConversionResult? result = null;
+            progress.Loaded += async (_, _) =>
+            {
+                try
+                {
+                    result = await QuillMD.Services.MarkItDownService.ConvertAsync(path, cts.Token);
+                }
+                finally
+                {
+                    progress.AutoClose();
+                }
+            };
+
+            await System.Threading.Tasks.Task.Yield(); // ensure UI is ready before blocking ShowDialog
+            progress.ShowDialog();
+
+            if (result == null || result.Status == QuillMD.Services.ConversionStatus.Cancelled)
+            {
+                App.Log("ImportFromPath: cancelled");
+                return;
+            }
+
+            if (result.Status != QuillMD.Services.ConversionStatus.Success)
+            {
+                App.Log($"ImportFromPath: failed — {result.Status}");
+                MessageBox.Show(
+                    result.ErrorMessage,
+                    "Error al importar",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            string suggestedPath = QuillMD.Services.ImportService.SuggestedMarkdownPath(path);
+            App.Log($"ImportFromPath: success, creating tab (suggest={suggestedPath})");
+            NewTab(filePath: null, content: result.Markdown, suggestedSavePath: suggestedPath, markDirty: true);
         }
 
         private void OpenRecentFile(string? path)
