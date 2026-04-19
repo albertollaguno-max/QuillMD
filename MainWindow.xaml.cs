@@ -563,28 +563,40 @@ namespace QuillMD
 
         private async void Window_Drop(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
-            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
-            if (files == null || files.Length == 0) return;
-
-            string path = files[0];
-            string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
-
-            if (ext == ".md" || ext == ".markdown" || ext == ".txt")
+            try
             {
-                // Flujo clásico: abrir como texto
-                var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
-                if (existing != null) { ActivateTab(existing); return; }
-                string? content = FileService.ReadFile(path);
-                if (content == null) return;
-                NewTab(path, content);
-                AddToRecent(path);
-                return;
+                if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files == null || files.Length == 0) return;
+
+                if (files.Length > 1)
+                    App.Log($"Window_Drop: {files.Length} archivos arrastrados; solo se procesa el primero.");
+
+                string path = files[0];
+                string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+
+                if (ext == ".md" || ext == ".markdown" || ext == ".txt")
+                {
+                    // Flujo clásico: abrir como texto
+                    var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
+                    if (existing != null) { ActivateTab(existing); return; }
+                    string? content = FileService.ReadFile(path);
+                    if (content == null) return;
+                    NewTab(path, content);
+                    AddToRecent(path);
+                    return;
+                }
+
+                if (QuillMD.Services.ImportService.IsImportable(path))
+                {
+                    await ImportFromPath(path);
+                }
             }
-
-            if (QuillMD.Services.ImportService.IsImportable(path))
+            catch (Exception ex)
             {
-                await ImportFromPath(path);
+                App.Log($"Window_Drop: error inesperado — {ex}");
+                MessageBox.Show($"Error inesperado al procesar el archivo:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

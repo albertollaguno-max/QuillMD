@@ -66,7 +66,7 @@
             <MenuItem Header="Archivo">
                 <MenuItem Header="Nuevo" Command="{Binding NewTabCommand}" InputGestureText="Ctrl+N"/>
                 <MenuItem Header="Abrir..." Command="{Binding OpenFileCommand}" InputGestureText="Ctrl+O"/>
-                <MenuItem Header="_Importar…"
+                <MenuItem Header="_Importar..."
                           Command="{Binding ImportCommand}"
                           InputGestureText="Ctrl+Alt+I" />
                 <MenuItem Header="Abrir carpeta..." Command="{Binding OpenFolderCommand}"/>
@@ -186,7 +186,7 @@
             <MenuItem Header="Ayuda">
                 <MenuItem Header="Referencia Markdown..." Command="{Binding ShowMarkdownHelpCommand}"/>
                 <Separator/>
-                <MenuItem Header="_Avisos de terceros…"
+                <MenuItem Header="_Avisos de terceros..."
                           Command="{Binding ShowThirdPartyNoticesCommand}" />
                 <Separator/>
                 <MenuItem Header="Acerca de QuillMD" Command="{Binding ShowAboutCommand}"/>
