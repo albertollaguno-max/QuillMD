@@ -146,3 +146,30 @@ QuillMD guarda automáticamente al cerrar:
 - Opción "Siempre encima"
 
 La configuración se almacena en `%AppData%/QuillMD/settings.json`.
+
+## Importar documentos
+
+QuillMD puede importar formatos no-Markdown y convertirlos a Markdown:
+
+- **PDF** (`.pdf`)
+- **Word** (`.docx`)
+- **PowerPoint** (`.pptx`)
+- **Excel** (`.xlsx`, `.xls`)
+- **HTML** (`.html`, `.htm`)
+- **EPUB** (`.epub`)
+- **Outlook** (`.msg`)
+- **Datos estructurados** (`.csv`, `.json`, `.xml`)
+- **ZIP** (`.zip` — itera por el contenido)
+
+### Cómo importar
+
+- **Menú:** `Archivo → Importar...` (atajo `Ctrl+Alt+I`)
+- **Drag & drop:** arrastra el archivo a la ventana de QuillMD
+
+La conversión abre el documento convertido en una pestaña nueva sin guardar. Al pulsar `Ctrl+S` la primera vez, se sugiere guardar como `<nombre-original>.md` en la carpeta del archivo fuente.
+
+### Limitaciones
+
+- Las imágenes embebidas no se extraen a archivos; markitdown genera placeholders o las omite según el formato.
+- Transcripción de audio y vídeos de YouTube no están disponibles en v1.
+- Timeout por defecto: 60 segundos por conversión. Archivos muy grandes pueden abortarse.

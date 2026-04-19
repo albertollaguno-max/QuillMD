@@ -22,6 +22,11 @@ Editor de Markdown WYSIWYG para Windows, construido con WPF (.NET 9).
 - **Tablas**: inserción, edición de celdas, agregar/eliminar filas y columnas, mover filas/columnas, alineación de texto por columna, barra flotante de herramientas con barra flotante
 - Notas al pie y tabla de contenidos automática
 
+### Importación
+- Importar PDF, DOCX, PPTX, XLSX/XLS, HTML, EPUB, CSV, JSON, XML, ZIP, Outlook `.msg`
+- Menú `Archivo → Importar...` o arrastrar archivo sobre la ventana
+- Conversión a Markdown vía [markitdown](https://github.com/microsoft/markitdown) de Microsoft (empaquetado con la aplicación)
+
 ### Interfaz
 - Temas claro y oscuro
 - Explorador de archivos lateral con árbol de carpetas
@@ -110,6 +115,10 @@ QuillMD/
 └── docs/
     └── plans/               # Documentos de diseño
 ```
+
+## Licencias de terceros
+
+QuillMD incluye [markitdown](https://github.com/microsoft/markitdown) (MIT, Microsoft Corporation) y sus dependencias transitivas para la función de importación. El archivo `THIRD-PARTY-NOTICES.md` en la distribución contiene los avisos completos de todas las dependencias empaquetadas (markitdown, pdfminer.six, mammoth, lxml, python-pptx, pandas, openpyxl, magika y otras). También accesible desde el menú `Ayuda → Avisos de terceros...`.
 
 ## Licencia
 
