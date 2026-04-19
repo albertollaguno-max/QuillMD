@@ -38,14 +38,17 @@ Write-Host "Instalando dependencias..." -ForegroundColor Cyan
 # 4. Generar THIRD-PARTY-NOTICES.md ANTES del PyInstaller
 Write-Host "Generando THIRD-PARTY-NOTICES.md..." -ForegroundColor Cyan
 $noticesPath = Join-Path $here "THIRD-PARTY-NOTICES.md"
+$noticesJsonPath = Join-Path $here "THIRD-PARTY-NOTICES.json"
 & $venvPython -m piplicenses `
     --from=mixed `
     --with-license-file `
     --with-urls `
     --with-notice-file `
-    --format=markdown `
+    --format=json `
     --ignore-packages pip setuptools wheel pip-licenses pyinstaller pyinstaller-hooks-contrib altgraph `
-    --output-file $noticesPath
+    --output-file $noticesJsonPath
+& $venvPython (Join-Path $here "notices_to_markdown.py") $noticesJsonPath $noticesPath
+Remove-Item $noticesJsonPath
 
 # 5. Build con PyInstaller
 Write-Host "Empaquetando con PyInstaller..." -ForegroundColor Cyan
