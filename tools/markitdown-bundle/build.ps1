@@ -9,11 +9,17 @@ $venvPath = Join-Path $here ".venv"
 
 Write-Host "=== markitdown-bundle build ===" -ForegroundColor Cyan
 
-# 1. Asegurar Python disponible
+# 1. Asegurar Python 3.11+ disponible
 $python = (Get-Command python -ErrorAction SilentlyContinue).Source
 if (-not $python) { throw "Python 3.11+ no encontrado en PATH." }
 
 $version = & $python --version
+$versionParts = ($version -split ' ')[1] -split '\.'
+$major = [int]$versionParts[0]
+$minor = [int]$versionParts[1]
+if ($major -lt 3 -or ($major -eq 3 -and $minor -lt 11)) {
+    throw "Se requiere Python 3.11+. Encontrado: $version"
+}
 Write-Host "Usando $version"
 
 # 2. Crear venv limpio
@@ -67,6 +73,7 @@ $tmpFile = Join-Path $env:TEMP "qmd_smoke.txt"
 "hola mundo" | Out-File -FilePath $tmpFile -Encoding utf8
 $out = & $builtExe $tmpFile
 if ($LASTEXITCODE -ne 0) { throw "Smoke test falló (exit $LASTEXITCODE). Salida: $out" }
+if ([string]::IsNullOrWhiteSpace($out)) { throw "Smoke test produjo salida vacía — el bundle puede estar roto." }
 Remove-Item $tmpFile
 
 # 7. Copiar artefactos a Resources/markitdown/
