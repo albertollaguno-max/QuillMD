@@ -171,6 +171,7 @@ La conversión abre el documento convertido en una pestaña nueva sin guardar. A
 
 ### Limitaciones
 
+- La calidad de la conversión depende del formato origen. Los PDF complejos (multi-columna, tablas anidadas, escaneos sin OCR) pueden perder maquetación; es una limitación de markitdown, no de QuillMD.
 - Las imágenes embebidas no se extraen a archivos; markitdown genera placeholders o las omite según el formato.
 - Transcripción de audio y vídeos de YouTube no están disponibles en v1.
 - Timeout por defecto: 60 segundos por conversión. Archivos muy grandes pueden abortarse.
