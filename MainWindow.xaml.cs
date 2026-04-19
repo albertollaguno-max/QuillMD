@@ -342,25 +342,30 @@ namespace QuillMD
         }
 
         // ─────────────────── Tab Management ───────────────────
-        private void NewTab(string? filePath = null, string? content = null)
+        private TabModel NewTab(string? filePath = null, string? content = null, string? suggestedSavePath = null, bool markDirty = false)
         {
-            App.Log($"NewTab: filePath={filePath ?? "(new)"}"
-);
+            App.Log($"NewTab: filePath={filePath ?? "(new)"} suggested={suggestedSavePath ?? "(none)"}");
             var doc = new MarkdownDocument
             {
                 FilePath = filePath ?? string.Empty,
-                Content = content ?? string.Empty
+                Content = content ?? string.Empty,
+                IsDirty = markDirty
             };
 
             var tab = new TabModel
             {
                 Document = doc,
-                TabTitle = doc.FileName,
-                IsActive = false
+                TabTitle = string.IsNullOrEmpty(suggestedSavePath)
+                    ? doc.FileName
+                    : System.IO.Path.GetFileNameWithoutExtension(suggestedSavePath) + (markDirty ? " •" : ""),
+                IsActive = false,
+                IsDirty = markDirty,
+                SuggestedSavePath = suggestedSavePath
             };
 
             Tabs.Add(tab);
             ActivateTab(tab);
+            return tab;
         }
 
         private void ActivateTab(TabModel tab)
@@ -505,7 +510,14 @@ namespace QuillMD
         private void SaveAs()
         {
             if (_activeTab == null) return;
-            string? path = FileService.SaveFileAs(_activeTab.Document.IsNewFile ? null : _activeTab.Document.FilePath);
+
+            string? suggested;
+            if (!_activeTab.Document.IsNewFile)
+                suggested = _activeTab.Document.FilePath;
+            else
+                suggested = _activeTab.SuggestedSavePath;  // null si no hay sugerencia
+
+            string? path = FileService.SaveFileAs(suggested);
             if (path == null) return;
 
             if (FileService.WriteFile(path, Editor.Text))
@@ -513,6 +525,7 @@ namespace QuillMD
                 _activeTab.Document.FilePath = path;
                 _activeTab.Document.Content = Editor.Text;
                 _activeTab.IsDirty = false;
+                _activeTab.SuggestedSavePath = null;
                 _activeTab.TabTitle = _activeTab.Document.FileName;
                 AddToRecent(path);
                 UpdateTitle();
