@@ -53,6 +53,10 @@ namespace QuillMD.Services
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8,
             };
+            // Sin terminal, Python bajo Windows escribe stdout en cp1252 por defecto
+            // y los acentos salen mal. Forzar UTF-8 end-to-end en el proceso hijo.
+            psi.Environment["PYTHONUTF8"] = "1";
+            psi.Environment["PYTHONIOENCODING"] = "utf-8";
             psi.ArgumentList.Add(inputPath);
 
             Process? process = null;
