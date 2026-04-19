@@ -72,8 +72,8 @@ Write-Host "Smoke test..." -ForegroundColor Cyan
 $tmpFile = Join-Path $env:TEMP "qmd_smoke.txt"
 "hola mundo" | Out-File -FilePath $tmpFile -Encoding utf8
 $out = & $builtExe $tmpFile
-if ($LASTEXITCODE -ne 0) { throw "Smoke test falló (exit $LASTEXITCODE). Salida: $out" }
-if ([string]::IsNullOrWhiteSpace($out)) { throw "Smoke test produjo salida vacía — el bundle puede estar roto." }
+if ($LASTEXITCODE -ne 0) { throw "Smoke test FAILED (exit $LASTEXITCODE). Output: $out" }
+if ([string]::IsNullOrWhiteSpace($out)) { throw "Smoke test produced empty output -- bundle may be broken." }
 Remove-Item $tmpFile
 
 # 7. Copiar artefactos a Resources/markitdown/
