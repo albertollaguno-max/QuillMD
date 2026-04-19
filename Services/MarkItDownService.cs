@@ -67,42 +67,46 @@ namespace QuillMD.Services
                         "No se pudo iniciar el proceso markitdown.exe");
                 }
 
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-
-                var stdoutTask = process.StandardOutput.ReadToEndAsync();
-                var stderrTask = process.StandardError.ReadToEndAsync();
-
-                try
+                using (process)
                 {
-                    await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    TryKill(process);
-                    if (cancellationToken.IsCancellationRequested)
-                        return new ConversionResult(ConversionStatus.Cancelled, string.Empty, "Cancelado por el usuario.");
-                    return new ConversionResult(ConversionStatus.Timeout, string.Empty,
-                        $"La conversión superó {timeoutSeconds} s y se abortó.");
-                }
+                    using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
-                string stdout = await stdoutTask.ConfigureAwait(false);
-                string stderr = await stderrTask.ConfigureAwait(false);
+                    var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                    var stderrTask = process.StandardError.ReadToEndAsync();
 
-                if (process.ExitCode != 0)
-                {
-                    string preview = Truncate(stderr, 500);
-                    return new ConversionResult(ConversionStatus.NonZeroExit, string.Empty,
-                        $"markitdown.exe terminó con código {process.ExitCode}.\n\n{preview}");
+                    try
+                    {
+                        await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        TryKill(process);
+                        if (cancellationToken.IsCancellationRequested)
+                            return new ConversionResult(ConversionStatus.Cancelled, string.Empty, "Cancelado por el usuario.");
+                        return new ConversionResult(ConversionStatus.Timeout, string.Empty,
+                            $"La conversión superó {timeoutSeconds} s y se abortó.");
+                    }
+
+                    string[] outputs = await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+                    string stdout = outputs[0];
+                    string stderr = outputs[1];
+
+                    if (process.ExitCode != 0)
+                    {
+                        string preview = Truncate(stderr, 500);
+                        return new ConversionResult(ConversionStatus.NonZeroExit, string.Empty,
+                            $"markitdown.exe terminó con código {process.ExitCode}.\n\n{preview}");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(stdout))
+                    {
+                        return new ConversionResult(ConversionStatus.EmptyOutput, string.Empty,
+                            "El archivo no contiene contenido extraíble.");
+                    }
+
+                    return new ConversionResult(ConversionStatus.Success, stdout, string.Empty);
                 }
-
-                if (string.IsNullOrWhiteSpace(stdout))
-                {
-                    return new ConversionResult(ConversionStatus.EmptyOutput, string.Empty,
-                        "El archivo no contiene contenido extraíble.");
-                }
-
-                return new ConversionResult(ConversionStatus.Success, stdout, string.Empty);
             }
             catch (Exception ex)
             {
