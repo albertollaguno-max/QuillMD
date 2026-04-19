@@ -19,6 +19,7 @@ QuillMD ofrece cuatro modos de trabajo, accesibles desde el menú **Visualizaci�
 |---|---|
 | `Ctrl+N` | Nueva pestaña |
 | `Ctrl+O` | Abrir archivo |
+| `Ctrl+Alt+I` | Importar documento (PDF, DOCX, etc.) |
 | `Ctrl+S` | Guardar |
 | `Ctrl+Shift+S` | Guardar como |
 | `Ctrl+W` | Cerrar pestaña |

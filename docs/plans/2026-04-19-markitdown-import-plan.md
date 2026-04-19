@@ -1279,7 +1279,7 @@ Ejecutar esta lista **antes de publicar v1.1.0**. Usar archivos reales, no de ju
 ### Triggers UI
 
 - [ ] Menú `Archivo → Importar…` abre el diálogo con el filtro correcto.
-- [ ] Atajo `Ctrl+Shift+I` abre el mismo diálogo.
+- [ ] Atajo `Ctrl+Alt+I` abre el mismo diálogo (NOTA: el plan inicial proponía `Ctrl+Shift+I` pero esa combinación ya estaba en uso para Insertar imagen; se cambió durante la implementación).
 - [ ] Drag & drop de PDF → se importa.
 - [ ] Drag & drop de `.md` → se abre como texto (no regresión).
 - [ ] Drag & drop de `.exe` → cursor "prohibido", no hace nada.
@@ -1293,7 +1293,7 @@ Ejecutar esta lista **antes de publicar v1.1.0**. Usar archivos reales, no de ju
 ### Errores
 
 - [ ] Cancelar durante conversión de PDF grande → proceso termina, sin pestaña nueva, sin crash.
-- [ ] Timeout forzado (editar `SettingsService` temporalmente a 2 s) con un PDF grande → mensaje "superó 60 s".
+- [ ] Timeout forzado (editar temporalmente `MarkItDownService.DefaultTimeoutSeconds` a 2) con un PDF grande → mensaje "superó 2 s y se abortó".
 - [ ] Renombrar `markitdown/markitdown.exe` a `.bak` y reintentar → mensaje "Falta markitdown.exe".
 - [ ] Importar archivo corrupto (PDF con bytes basura) → mensaje de error con preview de stderr.
 
