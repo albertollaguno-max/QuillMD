@@ -83,13 +83,13 @@ namespace QuillMD
             DataContext = this;
 
             // Initialize commands
-            NewTabCommand = new RelayCommand(() => NewTab());
-            OpenFileCommand = new RelayCommand(OpenFile);
+            NewTabCommand = new RelayCommand(async () => await NewTab());
+            OpenFileCommand = new RelayCommand(async () => await OpenFile());
             ImportCommand = new RelayCommand(async () => await ImportDocument());
             OpenFolderCommand = new RelayCommand(OpenFolder);
-            SaveCommand = new RelayCommand(Save);
-            SaveAsCommand = new RelayCommand(SaveAs);
-            CloseTabCommand = new RelayCommand(CloseActiveTab);
+            SaveCommand = new RelayCommand(async () => await Save());
+            SaveAsCommand = new RelayCommand(async () => await SaveAs());
+            CloseTabCommand = new RelayCommand(async () => await CloseActiveTab());
             ExportHtmlCommand = new RelayCommand(ExportHtml);
             ExitCommand = new RelayCommand(() => Application.Current.Shutdown());
             ToggleFindCommand = new RelayCommand(() => ToggleFindBar(false));
@@ -113,9 +113,9 @@ namespace QuillMD
             IncreaseFontCommand = new RelayCommand(() => AdjustFontSize(2));
             DecreaseFontCommand = new RelayCommand(() => AdjustFontSize(-2));
             ResetFontCommand = new RelayCommand(() => { Editor.FontSize = 14; });
-            NextTabCommand = new RelayCommand(NextTab);
-            PrevTabCommand = new RelayCommand(PrevTab);
-            OpenRecentCommand = new RelayCommand<string>(OpenRecentFile);
+            NextTabCommand = new RelayCommand(async () => await NextTab());
+            PrevTabCommand = new RelayCommand(async () => await PrevTab());
+            OpenRecentCommand = new RelayCommand<string>(async p => await OpenRecentFile(p));
             ShowAboutCommand = new RelayCommand(ShowAbout);
             ShowMarkdownHelpCommand = new RelayCommand(ShowMarkdownHelp);
             ShowThirdPartyNoticesCommand = new RelayCommand(ShowThirdPartyNotices);
@@ -147,24 +147,26 @@ namespace QuillMD
             foreach (var f in recent) RecentFiles.Add(f);
             App.Log($"Loaded {recent.Count} recent files");
 
-            // Open file from command line or blank tab
+            // Open file from command line or blank tab.
+            // Fire-and-forget is safe here: WebView2 isn't ready yet, so the WYSIWYG flush inside
+            // ActivateTab is a no-op.
             if (!string.IsNullOrEmpty(App.StartupFilePath))
             {
                 App.Log($"Opening startup file: {App.StartupFilePath}");
                 string? content = FileService.ReadFile(App.StartupFilePath);
                 if (content != null)
                 {
-                    NewTab(App.StartupFilePath, content);
+                    _ = NewTab(App.StartupFilePath, content);
                     AddToRecent(App.StartupFilePath);
                 }
                 else
                 {
-                    NewTab();
+                    _ = NewTab();
                 }
             }
             else
             {
-                NewTab();
+                _ = NewTab();
             }
             App.Log("Initial tab opened");
 
@@ -354,7 +356,7 @@ namespace QuillMD
             return tab.Document.FileName;
         }
 
-        private TabModel NewTab(string? filePath = null, string? content = null, string? suggestedSavePath = null, bool markDirty = false)
+        private async Task NewTab(string? filePath = null, string? content = null, string? suggestedSavePath = null, bool markDirty = false)
         {
             App.Log($"NewTab: filePath={filePath ?? "(new)"} suggested={suggestedSavePath ?? "(none)"}");
             var doc = new MarkdownDocument
@@ -374,12 +376,16 @@ namespace QuillMD
             tab.TabTitle = GetDisplayName(tab) + (markDirty ? " ●" : "");
 
             Tabs.Add(tab);
-            ActivateTab(tab);
-            return tab;
+            await ActivateTab(tab);
         }
 
-        private void ActivateTab(TabModel tab)
+        private async Task ActivateTab(TabModel tab)
         {
+            // Flush any pending WYSIWYG content of the outgoing tab so a paste/edit
+            // that hasn't crossed the debounce yet doesn't get lost or leaked into `tab`.
+            if (IsWysiwygMode && _activeTab != null && _activeTab != tab)
+                await SyncWysiwygToEditor();
+
             foreach (var t in Tabs) t.IsActive = false;
             tab.IsActive = true;
             _activeTab = tab;
@@ -391,18 +397,15 @@ namespace QuillMD
             UpdateTitle();
             UpdateStatusBar();
             RefreshPreview();
-
-            // Update tab highlights via refresh
-            var items = TabStrip.FindName("") as Panel;
         }
 
-        private void CloseActiveTab()
+        private async Task CloseActiveTab()
         {
             if (_activeTab == null) return;
-            CloseTab(_activeTab);
+            await CloseTab(_activeTab);
         }
 
-        private void CloseTab(TabModel tab)
+        private async Task CloseTab(TabModel tab)
         {
             if (tab.IsDirty)
             {
@@ -415,8 +418,8 @@ namespace QuillMD
                 if (result == MessageBoxResult.Cancel) return;
                 if (result == MessageBoxResult.Yes)
                 {
-                    ActivateTab(tab);
-                    Save();
+                    await ActivateTab(tab);
+                    await Save();
                 }
             }
 
@@ -425,31 +428,31 @@ namespace QuillMD
 
             if (Tabs.Count == 0)
             {
-                NewTab();
+                await NewTab();
             }
             else
             {
                 int nextIndex = Math.Min(index, Tabs.Count - 1);
-                ActivateTab(Tabs[nextIndex]);
+                await ActivateTab(Tabs[nextIndex]);
             }
         }
 
-        private void NextTab()
+        private async Task NextTab()
         {
             if (Tabs.Count < 2 || _activeTab == null) return;
             int idx = Tabs.IndexOf(_activeTab);
-            ActivateTab(Tabs[(idx + 1) % Tabs.Count]);
+            await ActivateTab(Tabs[(idx + 1) % Tabs.Count]);
         }
 
-        private void PrevTab()
+        private async Task PrevTab()
         {
             if (Tabs.Count < 2 || _activeTab == null) return;
             int idx = Tabs.IndexOf(_activeTab);
-            ActivateTab(Tabs[(idx - 1 + Tabs.Count) % Tabs.Count]);
+            await ActivateTab(Tabs[(idx - 1 + Tabs.Count) % Tabs.Count]);
         }
 
         // ─────────────────── File Operations ───────────────────
-        private void OpenFile()
+        private async Task OpenFile()
         {
             App.Log("OpenFile: showing dialog");
             string? path = FileService.OpenFile(_openFolderPath);
@@ -458,14 +461,14 @@ namespace QuillMD
             App.Log($"OpenFile: selected={path}");
             // Check if already open
             var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
-            if (existing != null) { ActivateTab(existing); return; }
+            if (existing != null) { await ActivateTab(existing); return; }
 
             App.Log("OpenFile: reading file...");
             string? content = FileService.ReadFile(path);
             if (content == null) { App.Log("OpenFile: ReadFile returned null"); return; }
 
             App.Log($"OpenFile: content length={content.Length} chars, calling NewTab");
-            NewTab(path, content);
+            await NewTab(path, content);
             AddToRecent(path);
             App.Log("OpenFile: done");
         }
@@ -536,7 +539,7 @@ namespace QuillMD
 
             string suggestedPath = QuillMD.Services.ImportService.SuggestedMarkdownPath(path);
             App.Log($"ImportFromPath: success, creating tab (suggest={suggestedPath})");
-            NewTab(filePath: null, content: result.Markdown, suggestedSavePath: suggestedPath, markDirty: true);
+            await NewTab(filePath: null, content: result.Markdown, suggestedSavePath: suggestedPath, markDirty: true);
         }
 
         private void Window_DragOver(object sender, DragEventArgs e)
@@ -579,10 +582,10 @@ namespace QuillMD
                 {
                     // Flujo clásico: abrir como texto
                     var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
-                    if (existing != null) { ActivateTab(existing); return; }
+                    if (existing != null) { await ActivateTab(existing); return; }
                     string? content = FileService.ReadFile(path);
                     if (content == null) return;
-                    NewTab(path, content);
+                    await NewTab(path, content);
                     AddToRecent(path);
                     return;
                 }
@@ -600,7 +603,7 @@ namespace QuillMD
             }
         }
 
-        private void OpenRecentFile(string? path)
+        private async Task OpenRecentFile(string? path)
         {
             if (string.IsNullOrEmpty(path)) return;
             if (!File.Exists(path))
@@ -611,11 +614,11 @@ namespace QuillMD
                 return;
             }
             var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
-            if (existing != null) { ActivateTab(existing); return; }
+            if (existing != null) { await ActivateTab(existing); return; }
             string? content = FileService.ReadFile(path);
             if (content != null)
             {
-                NewTab(path, content);
+                await NewTab(path, content);
                 AddToRecent(path);
             }
         }
@@ -628,13 +631,16 @@ namespace QuillMD
             LoadFileTree(folder);
         }
 
-        private void Save()
+        private async Task Save()
         {
             if (_activeTab == null) return;
 
+            // Flush WYSIWYG debounce so a just-pasted text is persisted instead of empty.
+            if (IsWysiwygMode) await SyncWysiwygToEditor();
+
             if (_activeTab.Document.IsNewFile)
             {
-                SaveAs();
+                await SaveAs();
                 return;
             }
 
@@ -647,9 +653,11 @@ namespace QuillMD
             }
         }
 
-        private void SaveAs()
+        private async Task SaveAs()
         {
             if (_activeTab == null) return;
+
+            if (IsWysiwygMode) await SyncWysiwygToEditor();
 
             string? suggested;
             if (!_activeTab.Document.IsNewFile)
@@ -805,16 +813,16 @@ namespace QuillMD
             return null;
         }
 
-        private void FileTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private async void FileTree_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (FileTree.SelectedItem is FileTreeItem item && !item.IsDirectory)
             {
                 var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == item.FullPath);
-                if (existing != null) { ActivateTab(existing); return; }
+                if (existing != null) { await ActivateTab(existing); return; }
                 string? content = FileService.ReadFile(item.FullPath);
                 if (content != null)
                 {
-                    NewTab(item.FullPath, content);
+                    await NewTab(item.FullPath, content);
                     AddToRecent(item.FullPath);
                 }
             }
@@ -938,6 +946,9 @@ namespace QuillMD
             if (!_webViewReady || PreviewWebView.CoreWebView2 == null) return;
             try
             {
+                // Cancel the JS debounce so a late timer doesn't fire into a new active tab.
+                await PreviewWebView.CoreWebView2.ExecuteScriptAsync(
+                    "if (window.cancelPendingChange) window.cancelPendingChange();");
                 string result = await PreviewWebView.CoreWebView2.ExecuteScriptAsync("document.getElementById('editor').innerHTML");
                 string html = System.Text.Json.JsonSerializer.Deserialize<string>(result) ?? "";
                 string markdown = HtmlToMarkdown.Convert(html);
@@ -946,9 +957,12 @@ namespace QuillMD
                 Editor.Text = markdown;
                 _suppressTextChanged = false;
 
-                if (_activeTab != null)
+                if (_activeTab != null && _activeTab.Document.Content != markdown)
                 {
                     _activeTab.Document.Content = markdown;
+                    _activeTab.IsDirty = true;
+                    _activeTab.TabTitle = GetDisplayName(_activeTab) + " ●";
+                    UpdateTitle();
                 }
             }
             catch (Exception ex) { App.LogFatal("SyncWysiwygToEditor", ex); }
@@ -1610,16 +1624,16 @@ namespace QuillMD
         }
 
         // ─────────────────── Tab Click Events ───────────────────
-        private void Tab_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private async void Tab_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is TabModel tab)
-                ActivateTab(tab);
+                await ActivateTab(tab);
         }
 
-        private void CloseTab_Click(object sender, RoutedEventArgs e)
+        private async void CloseTab_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.CommandParameter is TabModel tab)
-                CloseTab(tab);
+                await CloseTab(tab);
         }
 
         // ─────────────────── Status Bar & Title ───────────────────
@@ -1687,7 +1701,7 @@ namespace QuillMD
                 MessageBoxImage.Information);
         }
 
-        private void ShowMarkdownHelp()
+        private async void ShowMarkdownHelp()
         {
             string help = """
                 # Referencia rápida de Markdown
@@ -1731,8 +1745,8 @@ namespace QuillMD
 
             // Open help in a new tab
             var existing = Tabs.FirstOrDefault(t => t.TabTitle == "Referencia Markdown");
-            if (existing != null) { ActivateTab(existing); return; }
-            NewTab(null, help);
+            if (existing != null) { await ActivateTab(existing); return; }
+            await NewTab(null, help);
             _activeTab!.TabTitle = "Referencia Markdown";
         }
 
@@ -1816,8 +1830,12 @@ namespace QuillMD
             SettingsService.Save(s);
         }
 
-        private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        private bool _allowClose;
+
+        private async void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            if (_allowClose) { SaveSettings(); return; }
+
             SaveSettings();
 
             var dirtyTabs = Tabs.Where(t => t.IsDirty).ToList();
@@ -1838,11 +1856,16 @@ namespace QuillMD
 
             if (result == MessageBoxResult.Yes)
             {
+                // Defer the actual close until async saves finish; otherwise the window
+                // disposes while ActivateTab/Save are still awaiting the WebView2 flush.
+                e.Cancel = true;
                 foreach (var tab in dirtyTabs)
                 {
-                    ActivateTab(tab);
-                    Save();
+                    await ActivateTab(tab);
+                    await Save();
                 }
+                _allowClose = true;
+                Close();
             }
         }
     }

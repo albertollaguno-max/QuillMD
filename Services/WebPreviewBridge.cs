@@ -224,6 +224,12 @@ namespace QuillMD.Services
                 }, 500);
             }
 
+            // Allow C# to cancel the pending debounce before save/tab-switch so the
+            // timer does not fire late against a different active tab.
+            window.cancelPendingChange = function() {
+                clearTimeout(debounceTimer);
+            };
+
             editor.addEventListener('input', notifyChange);
 
             // Handle checkbox clicks and Ctrl+click on links
