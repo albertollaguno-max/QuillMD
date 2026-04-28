@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -7,7 +8,7 @@ namespace QuillMD
     public partial class App : Application
     {
         public static bool IsDarkTheme { get; private set; } = true;
-        public static string? StartupFilePath { get; private set; }
+        public static IReadOnlyList<string> StartupFilePaths { get; private set; } = Array.Empty<string>();
 
         // Log path: same folder as the exe, easy to find
         public static readonly string LogPath = Path.Combine(
@@ -34,9 +35,8 @@ namespace QuillMD
             TaskScheduler.UnobservedTaskException += (s, ex) =>
                 LogFatal("TaskScheduler.UnobservedTaskException", ex.Exception);
 
-            // Capture file path from command-line arguments
-            if (e.Args.Length > 0 && File.Exists(e.Args[0]))
-                StartupFilePath = e.Args[0];
+            // Capture all valid file paths from command-line arguments
+            StartupFilePaths = e.Args.Where(File.Exists).ToArray();
 
             // Log startup
             Log($"=== QuillMD started === args=[{string.Join(", ", e.Args)}]");

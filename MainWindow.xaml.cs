@@ -159,19 +159,20 @@ namespace QuillMD
             // Open file from command line or blank tab.
             // Fire-and-forget is safe here: WebView2 isn't ready yet, so the WYSIWYG flush inside
             // ActivateTab is a no-op.
-            if (!string.IsNullOrEmpty(App.StartupFilePath))
+            if (App.StartupFilePaths.Count > 0)
             {
-                App.Log($"Opening startup file: {App.StartupFilePath}");
-                string? content = FileService.ReadFile(App.StartupFilePath);
-                if (content != null)
+                foreach (var path in App.StartupFilePaths)
                 {
-                    _ = NewTab(App.StartupFilePath, content);
-                    AddToRecent(App.StartupFilePath);
+                    App.Log($"Opening startup file: {path}");
+                    string? content = FileService.ReadFile(path);
+                    if (content != null)
+                    {
+                        _ = NewTab(path, content);
+                        AddToRecent(path);
+                    }
                 }
-                else
-                {
-                    _ = NewTab();
-                }
+                // Defensive: if every file failed to read, ensure at least a blank tab
+                if (Tabs.Count == 0) _ = NewTab();
             }
             else
             {
