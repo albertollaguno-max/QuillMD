@@ -35,12 +35,29 @@ namespace QuillMD
             TaskScheduler.UnobservedTaskException += (s, ex) =>
                 LogFatal("TaskScheduler.UnobservedTaskException", ex.Exception);
 
-            // Capture all valid file paths from command-line arguments
-            StartupFilePaths = e.Args.Where(File.Exists).ToArray();
+            // Single-instance gate (filtra args y decide si arrancamos o reenviamos).
+            var siResult = QuillMD.Services.SingleInstance.TryAcquire(e.Args, out var validated);
+            if (siResult == QuillMD.Services.SingleInstanceResult.ForwardedToFirst)
+            {
+                Log("Forwarded args to existing instance, exiting.");
+                Shutdown(0);
+                return;
+            }
+            if (siResult == QuillMD.Services.SingleInstanceResult.FirstUnreachable)
+            {
+                Log("WARN: previous instance unreachable, starting as degraded primary.");
+            }
+            StartupFilePaths = validated;
 
             // Log startup
             Log($"=== QuillMD started === args=[{string.Join(", ", e.Args)}]");
             base.OnStartup(e);
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            QuillMD.Services.SingleInstance.Release();
+            base.OnExit(e);
         }
 
         public static void Log(string message)
