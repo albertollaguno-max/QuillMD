@@ -615,13 +615,30 @@ namespace QuillMD
         private async Task OpenRecentFile(string? path)
         {
             if (string.IsNullOrEmpty(path)) return;
+
             if (!File.Exists(path))
             {
+                if (PinnedFiles.Contains(path))
+                {
+                    var result = MessageBox.Show(
+                        $"No se encuentra el archivo:\n{path}\n\n¿Quitarlo de fijados?",
+                        "Archivo fijado no encontrado",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        PinnedFiles.Remove(path);
+                        FileService.SavePinnedFiles(PinnedFiles.ToList());
+                    }
+                    return;
+                }
+
                 MessageBox.Show($"El archivo ya no existe:\n{path}", "Archivo no encontrado",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 RecentFiles.Remove(path);
+                PersistRecentFiles();
                 return;
             }
+
             var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
             if (existing != null) { await ActivateTab(existing); return; }
             string? content = FileService.ReadFile(path);
