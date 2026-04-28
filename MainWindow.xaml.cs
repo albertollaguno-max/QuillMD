@@ -25,6 +25,7 @@ namespace QuillMD
         // ─────────────────── State ───────────────────
         public ObservableCollection<TabModel> Tabs { get; } = new();
         public ObservableCollection<string> RecentFiles { get; } = new();
+        public ObservableCollection<string> PinnedFiles { get; } = new();
         public ObservableCollection<FileTreeItem> FileTreeItems { get; } = new();
 
         private TabModel? _activeTab;
@@ -146,6 +147,14 @@ namespace QuillMD
             var recent = FileService.LoadRecentFiles();
             foreach (var f in recent) RecentFiles.Add(f);
             App.Log($"Loaded {recent.Count} recent files");
+
+            App.Log("Loading pinned files...");
+            var pinned = FileService.LoadPinnedFiles();
+            foreach (var f in pinned) PinnedFiles.Add(f);
+            App.Log($"Loaded {pinned.Count} pinned files");
+            RecentFiles.CollectionChanged += (_, _) => RebuildRecentMenu();
+            PinnedFiles.CollectionChanged += (_, _) => RebuildRecentMenu();
+            RebuildRecentMenu();
 
             // Open file from command line or blank tab.
             // Fire-and-forget is safe here: WebView2 isn't ready yet, so the WYSIWYG flush inside
@@ -606,13 +615,30 @@ namespace QuillMD
         private async Task OpenRecentFile(string? path)
         {
             if (string.IsNullOrEmpty(path)) return;
+
             if (!File.Exists(path))
             {
+                if (PinnedFiles.Contains(path))
+                {
+                    var result = MessageBox.Show(
+                        $"No se encuentra el archivo:\n{path}\n\n¿Quitarlo de fijados?",
+                        "Archivo fijado no encontrado",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        PinnedFiles.Remove(path);
+                        FileService.SavePinnedFiles(PinnedFiles.ToList());
+                    }
+                    return;
+                }
+
                 MessageBox.Show($"El archivo ya no existe:\n{path}", "Archivo no encontrado",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 RecentFiles.Remove(path);
+                PersistRecentFiles();
                 return;
             }
+
             var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
             if (existing != null) { await ActivateTab(existing); return; }
             string? content = FileService.ReadFile(path);
@@ -758,10 +784,126 @@ namespace QuillMD
 
         private void AddToRecent(string path)
         {
+            if (PinnedFiles.Contains(path)) return; // los fijados no se mueven ni se duplican en recientes
+
             var list = RecentFiles.ToList();
             FileService.AddRecentFile(path, list);
             RecentFiles.Clear();
             foreach (var f in list) RecentFiles.Add(f);
+        }
+
+        private void RebuildRecentMenu()
+        {
+            if (RecentFilesMenuItem == null) return;
+            RecentFilesMenuItem.Items.Clear();
+
+            foreach (var path in PinnedFiles)
+                RecentFilesMenuItem.Items.Add(BuildRecentMenuItem(path, isPinned: true));
+
+            if (PinnedFiles.Count > 0 && RecentFiles.Count > 0)
+                RecentFilesMenuItem.Items.Add(new Separator());
+
+            foreach (var path in RecentFiles)
+                RecentFilesMenuItem.Items.Add(BuildRecentMenuItem(path, isPinned: false));
+        }
+
+        private MenuItem BuildRecentMenuItem(string path, bool isPinned)
+        {
+            var fileName = Path.GetFileName(path);
+
+            var pinButton = new Button
+            {
+                Content = "📌",
+                ToolTip = isPinned ? "Quitar de fijados" : "Fijar",
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(2, 0, 6, 0),
+                Margin = new Thickness(0),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Focusable = false,
+                Opacity = isPinned ? 1.0 : 0.35,
+                FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            if (!isPinned)
+            {
+                pinButton.MouseEnter += (_, _) => pinButton.Opacity = 1.0;
+                pinButton.MouseLeave += (_, _) => pinButton.Opacity = 0.35;
+            }
+
+            pinButton.Click += (_, e) =>
+            {
+                e.Handled = true;
+                if (isPinned) UnpinFile(path);
+                else PinFile(path);
+            };
+
+            var label = new TextBlock
+            {
+                Text = fileName,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var panel = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(pinButton, Dock.Left);
+            panel.Children.Add(pinButton);
+            panel.Children.Add(label);
+
+            var item = new MenuItem
+            {
+                Header = panel,
+                ToolTip = path
+            };
+            item.Click += async (_, e) =>
+            {
+                if (e.OriginalSource is Button) return; // evita doble disparo si el click vino del botón
+                await OpenRecentFile(path);
+            };
+            return item;
+        }
+
+        private void PinFile(string path)
+        {
+            if (PinnedFiles.Count >= FileService.MaxPinnedFiles)
+            {
+                MessageBox.Show(
+                    "Has alcanzado el máximo de 10 archivos fijados. Quita alguno antes de fijar otro.",
+                    "Archivos fijados",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            RecentFiles.Remove(path);
+            PinnedFiles.Insert(0, path);
+
+            FileService.SavePinnedFiles(PinnedFiles.ToList());
+            PersistRecentFiles();
+        }
+
+        private void PersistRecentFiles()
+        {
+            try
+            {
+                var path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "QuillMD", "recent.txt");
+                File.WriteAllLines(path, RecentFiles);
+            }
+            catch { }
+        }
+
+        private void UnpinFile(string path)
+        {
+            PinnedFiles.Remove(path);
+
+            RecentFiles.Remove(path); // por si acaso, mantén la invariante
+            RecentFiles.Insert(0, path);
+            while (RecentFiles.Count > FileService.MaxRecentFiles)
+                RecentFiles.RemoveAt(RecentFiles.Count - 1);
+
+            FileService.SavePinnedFiles(PinnedFiles.ToList());
+            PersistRecentFiles();
         }
 
         // ─────────────────── File Tree ───────────────────

@@ -74,15 +74,7 @@
                 <MenuItem Header="Guardar" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S"/>
                 <MenuItem Header="Guardar como..." Command="{Binding SaveAsCommand}" InputGestureText="Ctrl+Shift+S"/>
                 <Separator/>
-                <MenuItem Header="Archivos recientes" ItemsSource="{Binding RecentFiles}">
-                    <MenuItem.ItemContainerStyle>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                            <Setter Property="Header" Value="{Binding}"/>
-                            <Setter Property="Command" Value="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                            <Setter Property="CommandParameter" Value="{Binding}"/>
-                        </Style>
-                    </MenuItem.ItemContainerStyle>
-                </MenuItem>
+                <MenuItem x:Name="RecentFilesMenuItem" Header="Archivos recientes"/>
                 <Separator/>
                 <MenuItem Header="Exportar a HTML..." Command="{Binding ExportHtmlCommand}"/>
                 <MenuItem Header="Exportar a PDF..." Click="ExportPdf_Click" InputGestureText="Ctrl+Shift+P"/>
