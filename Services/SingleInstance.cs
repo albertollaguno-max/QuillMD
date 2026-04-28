@@ -46,8 +46,7 @@ namespace QuillMD.Services
 
             // Not the first instance — discard the unowned mutex (do not Release: not ours).
             mutex.Dispose();
-            // Pipe client logic lands in Task 4. For now, treat as unreachable so we degrade.
-            return SingleInstanceResult.FirstUnreachable;
+            return TryForwardToFirstInstance(_pipeName!, validatedArgs);
         }
 
         public static void Release()
@@ -59,6 +58,41 @@ namespace QuillMD.Services
             _cts = null;
             _serverTask = null;
             _mutex = null;
+        }
+
+        private static SingleInstanceResult TryForwardToFirstInstance(string pipeName, IReadOnlyList<string> paths)
+        {
+            try
+            {
+                using var client = new NamedPipeClientStream(
+                    serverName: ".",
+                    pipeName: pipeName,
+                    direction: PipeDirection.Out);
+
+                client.Connect(2000); // ms
+
+                var sb = new StringBuilder();
+                sb.Append(ProtocolHeader).Append('\n');
+                foreach (var p in paths)
+                    sb.Append(p).Append('\n');
+
+                var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+                client.Write(bytes, 0, bytes.Length);
+                client.Flush();
+                return SingleInstanceResult.ForwardedToFirst;
+            }
+            catch (TimeoutException)
+            {
+                return SingleInstanceResult.FirstUnreachable;
+            }
+            catch (IOException)
+            {
+                return SingleInstanceResult.FirstUnreachable;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return SingleInstanceResult.FirstUnreachable;
+            }
         }
 
         private static async Task RunServerLoop(string pipeName, CancellationToken ct)
