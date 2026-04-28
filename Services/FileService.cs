@@ -107,12 +107,12 @@ namespace QuillMD.Services
             catch { }
         }
 
-        private static string GetSettingsPath()
+        private static string GetSettingsPath(string fileName = "recent.txt")
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string dir = Path.Combine(appData, "QuillMD");
             Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "recent.txt");
+            return Path.Combine(dir, fileName);
         }
 
         public static string? ChooseFolder()
