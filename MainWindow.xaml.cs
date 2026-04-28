@@ -874,8 +874,18 @@ namespace QuillMD
             catch { }
         }
 
-        // Stub — implementación real en Task 7
-        private void UnpinFile(string path) { }
+        private void UnpinFile(string path)
+        {
+            PinnedFiles.Remove(path);
+
+            RecentFiles.Remove(path); // por si acaso, mantén la invariante
+            RecentFiles.Insert(0, path);
+            while (RecentFiles.Count > FileService.MaxRecentFiles)
+                RecentFiles.RemoveAt(RecentFiles.Count - 1);
+
+            FileService.SavePinnedFiles(PinnedFiles.ToList());
+            PersistRecentFiles();
+        }
 
         // ─────────────────── File Tree ───────────────────
         private void LoadFileTree(string folder)
