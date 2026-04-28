@@ -844,8 +844,37 @@ namespace QuillMD
             return item;
         }
 
-        // Stubs — implementación real en Task 6 y Task 7
-        private void PinFile(string path) { }
+        private void PinFile(string path)
+        {
+            if (PinnedFiles.Count >= FileService.MaxPinnedFiles)
+            {
+                MessageBox.Show(
+                    "Has alcanzado el máximo de 10 archivos fijados. Quita alguno antes de fijar otro.",
+                    "Archivos fijados",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            RecentFiles.Remove(path);
+            PinnedFiles.Insert(0, path);
+
+            FileService.SavePinnedFiles(PinnedFiles.ToList());
+            PersistRecentFiles();
+        }
+
+        private void PersistRecentFiles()
+        {
+            try
+            {
+                var path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "QuillMD", "recent.txt");
+                File.WriteAllLines(path, RecentFiles);
+            }
+            catch { }
+        }
+
+        // Stub — implementación real en Task 7
         private void UnpinFile(string path) { }
 
         // ─────────────────── File Tree ───────────────────
