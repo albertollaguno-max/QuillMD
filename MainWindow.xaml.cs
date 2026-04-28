@@ -1837,7 +1837,7 @@ namespace QuillMD
         private void ShowAbout()
         {
             MessageBox.Show(
-                "QuillMD v1.1.1\n\nEditor Markdown WYSIWYG nativo para Windows.\n\nTecnología: C# WPF + AvalonEdit + Markdig\n\n© 2026 QuillMD",
+                "QuillMD v1.2.0\n\nEditor Markdown WYSIWYG nativo para Windows.\n\nTecnología: C# WPF + AvalonEdit + Markdig\n\n© 2026 QuillMD",
                 "Acerca de QuillMD",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);

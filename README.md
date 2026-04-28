@@ -42,7 +42,7 @@ Editor de Markdown WYSIWYG para Windows, construido con WPF (.NET 9).
 
 ### Persistencia
 - Guardado automático del estado de la aplicación (tema, modo de vista, sidebar, posición de ventana, tamaño de fuente)
-- Historial de archivos recientes
+- Historial de archivos recientes con posibilidad de fijar entradas para que no roten
 
 ## Requisitos
 

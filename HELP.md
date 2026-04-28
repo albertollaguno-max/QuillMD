@@ -94,6 +94,17 @@ QuillMD ofrece cuatro modos de trabajo, accesibles desde el menú **Visualizaci�
 |---|---|
 | `Ctrl+Click` en enlace | Abrir enlace en el navegador |
 
+## Archivos recientes
+
+Desde **Archivo > Archivos recientes** se accede al historial de los últimos archivos abiertos.
+
+- Cada entrada muestra el nombre del archivo (la ruta completa aparece en el tooltip al pasar el ratón).
+- A la izquierda de cada entrada hay un icono de chincheta 📌. Pulsa la chincheta tenue de un archivo reciente para **fijarlo**: pasa a la sección superior y deja de rotar fuera del menú al abrir nuevos archivos.
+- Pulsa la chincheta opaca de un fijado para **desfijarlo**: vuelve a la sección de recientes.
+- Una línea horizontal separa los fijados (arriba) de los recientes (abajo).
+- Tope: 10 fijados y 10 recientes (independientes).
+- Si un fijado apunta a un archivo borrado, al hacer clic aparece un diálogo Sí/No para quitarlo de la lista (útil si está en una unidad temporalmente desconectada y prefieres mantenerlo).
+
 ## Explorador de archivos
 
 1. Abre una carpeta desde **Archivo > Abrir carpeta**
