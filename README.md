@@ -44,6 +44,10 @@ Editor de Markdown WYSIWYG para Windows, construido con WPF (.NET 9).
 - Guardado automático del estado de la aplicación (tema, modo de vista, sidebar, posición de ventana, tamaño de fuente)
 - Historial de archivos recientes con posibilidad de fijar entradas para que no roten
 
+### Comportamiento de lanzamiento
+- Instancia única: al abrir un `.md` desde el Explorador con QuillMD ya en marcha, el archivo se añade como pestaña a la ventana existente en lugar de abrir una nueva
+- Soporte para abrir varios archivos a la vez (multi-selección desde el Explorador, o `QuillMD.exe a.md b.md ...` desde línea de comandos)
+
 ## Requisitos
 
 - Windows 10/11
