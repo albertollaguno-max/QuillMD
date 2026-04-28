@@ -25,6 +25,7 @@ namespace QuillMD
         // ─────────────────── State ───────────────────
         public ObservableCollection<TabModel> Tabs { get; } = new();
         public ObservableCollection<string> RecentFiles { get; } = new();
+        public ObservableCollection<string> PinnedFiles { get; } = new();
         public ObservableCollection<FileTreeItem> FileTreeItems { get; } = new();
 
         private TabModel? _activeTab;
@@ -146,6 +147,11 @@ namespace QuillMD
             var recent = FileService.LoadRecentFiles();
             foreach (var f in recent) RecentFiles.Add(f);
             App.Log($"Loaded {recent.Count} recent files");
+
+            App.Log("Loading pinned files...");
+            var pinned = FileService.LoadPinnedFiles();
+            foreach (var f in pinned) PinnedFiles.Add(f);
+            App.Log($"Loaded {pinned.Count} pinned files");
 
             // Open file from command line or blank tab.
             // Fire-and-forget is safe here: WebView2 isn't ready yet, so the WYSIWYG flush inside
