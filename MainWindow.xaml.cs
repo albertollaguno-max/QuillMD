@@ -234,6 +234,8 @@ namespace QuillMD
 
             // Initialize WebView2 for WYSIWYG mode
             InitializeWebView();
+
+            QuillMD.Services.SingleInstance.MessageReceived += OnFilesReceivedFromOtherInstance;
         }
 
         private bool _webViewReady = false;
@@ -905,6 +907,48 @@ namespace QuillMD
 
             FileService.SavePinnedFiles(PinnedFiles.ToList());
             PersistRecentFiles();
+        }
+
+        private void OnFilesReceivedFromOtherInstance(IReadOnlyList<string> paths)
+        {
+            // Pipe server thread → marshal to UI thread.
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                BringToFront();
+                if (paths.Count == 0) return;
+
+                foreach (var path in paths)
+                {
+                    if (!File.Exists(path)) continue;
+
+                    var existing = Tabs.FirstOrDefault(t => t.Document.FilePath == path);
+                    if (existing != null)
+                    {
+                        _ = ActivateTab(existing);
+                        continue;
+                    }
+
+                    string? content = FileService.ReadFile(path);
+                    if (content != null)
+                    {
+                        _ = NewTab(path, content);
+                        AddToRecent(path);
+                    }
+                }
+            });
+        }
+
+        private void BringToFront()
+        {
+            if (WindowState == WindowState.Minimized)
+                WindowState = WindowState.Normal;
+
+            Activate();
+
+            // WPF trick to defeat the Windows "no foreground stealing" guard
+            // when activation comes from a different process.
+            Topmost = true;
+            Topmost = false;
         }
 
         // ─────────────────── File Tree ───────────────────
