@@ -767,6 +767,8 @@ namespace QuillMD
 
         private void AddToRecent(string path)
         {
+            if (PinnedFiles.Contains(path)) return; // los fijados no se mueven ni se duplican en recientes
+
             var list = RecentFiles.ToList();
             FileService.AddRecentFile(path, list);
             RecentFiles.Clear();
