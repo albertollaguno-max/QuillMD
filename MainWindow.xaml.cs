@@ -152,6 +152,9 @@ namespace QuillMD
             var pinned = FileService.LoadPinnedFiles();
             foreach (var f in pinned) PinnedFiles.Add(f);
             App.Log($"Loaded {pinned.Count} pinned files");
+            RecentFiles.CollectionChanged += (_, _) => RebuildRecentMenu();
+            PinnedFiles.CollectionChanged += (_, _) => RebuildRecentMenu();
+            RebuildRecentMenu();
 
             // Open file from command line or blank tab.
             // Fire-and-forget is safe here: WebView2 isn't ready yet, so the WYSIWYG flush inside
@@ -769,6 +772,81 @@ namespace QuillMD
             RecentFiles.Clear();
             foreach (var f in list) RecentFiles.Add(f);
         }
+
+        private void RebuildRecentMenu()
+        {
+            if (RecentFilesMenuItem == null) return;
+            RecentFilesMenuItem.Items.Clear();
+
+            foreach (var path in PinnedFiles)
+                RecentFilesMenuItem.Items.Add(BuildRecentMenuItem(path, isPinned: true));
+
+            if (PinnedFiles.Count > 0 && RecentFiles.Count > 0)
+                RecentFilesMenuItem.Items.Add(new Separator());
+
+            foreach (var path in RecentFiles)
+                RecentFilesMenuItem.Items.Add(BuildRecentMenuItem(path, isPinned: false));
+        }
+
+        private MenuItem BuildRecentMenuItem(string path, bool isPinned)
+        {
+            var fileName = Path.GetFileName(path);
+
+            var pinButton = new Button
+            {
+                Content = "📌",
+                ToolTip = isPinned ? "Quitar de fijados" : "Fijar",
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(2, 0, 6, 0),
+                Margin = new Thickness(0),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Focusable = false,
+                Opacity = isPinned ? 1.0 : 0.35,
+                FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            if (!isPinned)
+            {
+                pinButton.MouseEnter += (_, _) => pinButton.Opacity = 1.0;
+                pinButton.MouseLeave += (_, _) => pinButton.Opacity = 0.35;
+            }
+
+            pinButton.Click += (_, e) =>
+            {
+                e.Handled = true;
+                if (isPinned) UnpinFile(path);
+                else PinFile(path);
+            };
+
+            var label = new TextBlock
+            {
+                Text = fileName,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var panel = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(pinButton, Dock.Left);
+            panel.Children.Add(pinButton);
+            panel.Children.Add(label);
+
+            var item = new MenuItem
+            {
+                Header = panel,
+                ToolTip = path
+            };
+            item.Click += async (_, e) =>
+            {
+                if (e.OriginalSource is Button) return; // evita doble disparo si el click vino del botón
+                await OpenRecentFile(path);
+            };
+            return item;
+        }
+
+        // Stubs — implementación real en Task 6 y Task 7
+        private void PinFile(string path) { }
+        private void UnpinFile(string path) { }
 
         // ─────────────────── File Tree ───────────────────
         private void LoadFileTree(string folder)
