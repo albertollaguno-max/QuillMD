@@ -6,7 +6,8 @@ namespace QuillMD.Services
 {
     public class FileService
     {
-        private const int MaxRecentFiles = 10;
+        public const int MaxRecentFiles = 10;
+        public const int MaxPinnedFiles = 10;
         private const string RecentFilesKey = "RecentFiles";
 
         public static string? OpenFile(string? initialDirectory = null)
@@ -87,6 +88,36 @@ namespace QuillMD.Services
             }
             catch { }
             return result;
+        }
+
+        public static List<string> LoadPinnedFiles()
+        {
+            var result = new List<string>();
+            try
+            {
+                string settingsPath = GetSettingsPath("pinned.txt");
+                if (File.Exists(settingsPath))
+                {
+                    var lines = File.ReadAllLines(settingsPath);
+                    foreach (var line in lines)
+                    {
+                        var trimmed = line.Trim();
+                        if (!string.IsNullOrEmpty(trimmed))
+                            result.Add(trimmed);
+                    }
+                }
+            }
+            catch { }
+            return result;
+        }
+
+        public static void SavePinnedFiles(List<string> pinnedFiles)
+        {
+            try
+            {
+                File.WriteAllLines(GetSettingsPath("pinned.txt"), pinnedFiles);
+            }
+            catch { }
         }
 
         public static void AddRecentFile(string filePath, List<string> recentFiles)
