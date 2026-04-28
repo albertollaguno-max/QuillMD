@@ -1,5 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Pipes;
+using System.Linq;
+using System.Security.Principal;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace QuillMD.Services
 {
@@ -12,24 +18,92 @@ namespace QuillMD.Services
 
     public static class SingleInstance
     {
+        private const string ProtocolHeader = "v1";
+
+        private static Mutex? _mutex;
+        private static CancellationTokenSource? _cts;
+        private static Task? _serverTask;
+        private static string? _pipeName;
+
         public static event Action<IReadOnlyList<string>>? MessageReceived;
 
         public static SingleInstanceResult TryAcquire(string[] args, out IReadOnlyList<string> validatedArgs)
         {
             validatedArgs = args.Where(File.Exists).ToArray();
-            // Skeleton: always behave as first instance until Task 3+ wire mutex and pipe.
-            return SingleInstanceResult.FirstInstance;
+
+            var sid = WindowsIdentity.GetCurrent().User?.Value ?? "anon";
+            var mutexName = $@"Local\QuillMD-SingleInstance-{sid}";
+            _pipeName = $"QuillMD-Pipe-{sid}";
+
+            var mutex = new Mutex(initiallyOwned: true, mutexName, out bool createdNew);
+            if (createdNew)
+            {
+                _mutex = mutex;
+                _cts = new CancellationTokenSource();
+                _serverTask = Task.Run(() => RunServerLoop(_pipeName, _cts.Token));
+                return SingleInstanceResult.FirstInstance;
+            }
+
+            // Not the first instance — discard the unowned mutex (do not Release: not ours).
+            mutex.Dispose();
+            // Pipe client logic lands in Task 4. For now, treat as unreachable so we degrade.
+            return SingleInstanceResult.FirstUnreachable;
         }
 
         public static void Release()
         {
-            // Skeleton: no-op until Task 3 introduces the mutex.
+            try { _cts?.Cancel(); } catch { }
+            try { _serverTask?.Wait(500); } catch { }
+            try { _mutex?.ReleaseMutex(); } catch { }
+            try { _mutex?.Dispose(); } catch { }
+            _cts = null;
+            _serverTask = null;
+            _mutex = null;
         }
 
-        // Helper used by App once Task 5 subscribes; kept here so it compiles in the skeleton.
-        internal static void RaiseMessageReceived(IReadOnlyList<string> paths)
+        private static async Task RunServerLoop(string pipeName, CancellationToken ct)
         {
-            MessageReceived?.Invoke(paths);
+            while (!ct.IsCancellationRequested)
+            {
+                NamedPipeServerStream? server = null;
+                try
+                {
+                    server = new NamedPipeServerStream(
+                        pipeName,
+                        PipeDirection.In,
+                        maxNumberOfServerInstances: 1,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
+
+                    await server.WaitForConnectionAsync(ct).ConfigureAwait(false);
+
+                    using var reader = new StreamReader(server, Encoding.UTF8);
+                    var raw = await reader.ReadToEndAsync().ConfigureAwait(false);
+                    var lines = raw.Split('\n', StringSplitOptions.None)
+                                   .Select(l => l.TrimEnd('\r'))
+                                   .ToArray();
+
+                    if (lines.Length == 0 || lines[0] != ProtocolHeader)
+                    {
+                        // Unknown protocol — ignore and keep listening.
+                        continue;
+                    }
+
+                    var paths = lines.Skip(1)
+                                     .Where(l => !string.IsNullOrEmpty(l))
+                                     .ToArray();
+                    MessageReceived?.Invoke(paths);
+                }
+                catch (OperationCanceledException) { /* graceful shutdown */ }
+                catch (Exception)
+                {
+                    // Swallow per-connection errors; keep the server alive.
+                }
+                finally
+                {
+                    server?.Dispose();
+                }
+            }
         }
     }
 }
